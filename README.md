@@ -1,19 +1,20 @@
 ![i.sh](docs/logo.png)
+
 Database engine completely built in bash.
 
 
 ## Features
-	- SQL-like syntax on the commandline
-	- Runs completely on bash. Relies on grep, awk, etc.
-	- Just one dependency.
-	- Create tables
-	- Insert / update records
-	- Search, fetch by ID, list all records in table
+	* SQL-like syntax on the commandline
+	* Runs completely on bash. Relies on grep, awk, etc.
+	* Just one dependency.
+	* Create tables
+	* Insert / update records
+	* Search, fetch by ID, list all records in table
 
 
 ## Dependencies
 
-	- jq (for json support)
+	* jq (for json support)
 
 
 ## Examples
