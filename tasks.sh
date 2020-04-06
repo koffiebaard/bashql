@@ -110,6 +110,12 @@ task_create_table () {
 	create_table "$tablename";
 }
 
+task_drop_table () {
+	local tablename="$(get_argument 'table')";
+
+	drop_table "$tablename";
+}
+
 
 
 

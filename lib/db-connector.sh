@@ -261,7 +261,7 @@ delete () {
 	if is_int "$line_number"; then
 
 		# delete by line number
-		sed -i "${line_number}d" "$db_file"
+		delete_line_by_number "$line_number"
 	else
 		echo "Error deleting record: ID could not be found in database.";
 		exit 1;
@@ -333,9 +333,80 @@ create_table () {
 }
 
 
+drop_table () {
+	local tablename="$1";
+
+	if ! table_exists "$tablename"; then
+		echo "Error: Table \"$tablename\" doesn't exist.";
+		exit 1
+	fi
+
+	# fetch line numbers of all records we'll remove
+	line_number_start=$(cat -n "$db_file" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $tablename/,/###/p" | \
+		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
+		awk '{print $1}' | \
+		head -n1);
+
+	line_number_end=$(cat -n "$db_file" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $tablename/,/###/p" | \
+		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
+		awk '{print $1}' | \
+		tail -n1);
+
+	if is_int "$line_number_start" && is_int "$line_number_end"; then
+
+		# remove records by line number range
+		delete_lines_by_number_range "$line_number_start" "$line_number_end"
+	fi
+
+	# now for the table
+	local line_number_table=$(egrep -n "^### $tablename" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+
+	if is_int "$line_number_table"; then
+
+		delete_line_by_number "$line_number_table"
+	else
+		echo "Error removing table";
+		exit 1;
+	fi
+}
 
 
+delete_line_by_number () {
+	local line_number="$1";
+	local last_linecount=$(get_last_linecount "$db_file");
 
+	sed -i "${line_number}d" "$db_file"
+
+	# were we removing up until the end of the file? remove the last newline.
+	if [[ "$line_number" == "$last_linecount" ]]; then
+		truncate -s -1 "$db_file";
+	fi
+}
+
+
+delete_lines_by_number_range () {
+	local line_number_start="$1";
+	local line_number_end="$2";
+	local last_linecount=$(get_last_linecount "$db_file");
+
+	sed -i "${line_number_start},${line_number_end}d" "$db_file"
+
+	# were we removing up until the end of the file? remove the last newline.
+	if [[ "$line_number_end" == "$last_linecount" ]]; then
+		truncate -s -1 "$db_file";
+	fi
+}
+
+get_last_linecount () {
+	local file="$1";
+
+	last_linecount=$(cat "$file" | wc -l);
+	((last_linecount++));
+
+	echo "$last_linecount";
+}
 
 
 
