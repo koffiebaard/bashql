@@ -16,7 +16,7 @@ task_search_in_table () {
 		exit 1;
 	fi
 
-	get "$(from_table $tablename)" "$select" "$search_string" "$limit";
+	get "$(from_table $tablename)" "$tablename" "$select" "$search_string" "$limit";
 }
 
 task_list_records_in_table () {
@@ -30,15 +30,16 @@ task_list_records_in_table () {
 		exit 1;
 	fi
 
-	get "$(from_table $tablename)" "$select" "" "$limit";
+	get "$(from_table $tablename)" "$tablename" "$select" "" "$limit";
 }
 
 
 task_get_record_by_id () {
 	local select="$(get_argument 'select')";
 	local id="$(get_argument 'id')";
+	local tablename="$(get_argument 'from')";
 
-	get "$(record_by_id $id)" "$select" "" ""
+	get "$(record_by_id $id)" "$tablename" "$select" "" ""
 }
 
 
@@ -73,7 +74,7 @@ task_update_record () {
 		exit 1;
 	fi
 
-	update "$id" "$title" "$value";
+	update "$id" "$table";
 
 	if [[ $? == 0 ]]; then
 		echo "OK";
@@ -106,8 +107,9 @@ task_delete_record () {
 
 task_create_table () {
 	local tablename="$(get_argument 'table')";
+	local columns="$(get_argument 'columns')";
 
-	create_table "$tablename";
+	create_table "$tablename" "$columns";
 }
 
 task_drop_table () {
@@ -115,9 +117,4 @@ task_drop_table () {
 
 	drop_table "$tablename";
 }
-
-
-
-
-
 

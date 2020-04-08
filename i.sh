@@ -2,7 +2,7 @@
 
 curdir="$(dirname "$0")";
 
-db_file="$curdir/data";
+db_file="$curdir/datAAA";
 
 source "$curdir/lib/db-connector.sh";
 source "$curdir/tasks.sh";

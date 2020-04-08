@@ -4,6 +4,7 @@ curdir="$(dirname "$0")";
 
 source "$curdir/lib/internals.sh";
 
+delim="|o_o|";
 
 record_by_id () {
 	id="$1";
@@ -85,19 +86,52 @@ read_metadata () {
 	echo "$fields";
 }
 
+get_columns () {
+	table_name="$1";
+	show_only_this_field="$2";
+
+	local columns='[]';
+	local records=$(cat "$db_file" | sed -n "/### $table_name/,/###/p" | grep '^--');
+
+	while read record; do
+
+		record=$(echo "${record:2}" | sed 's/|o_o|/\t/g');
+
+		local column_name=$(echo "$record" | awk '{print $1}');
+		local data_type=$(echo "$record" | awk '{print $2}');
+
+		if [[ "$show_only_this_field" != "" && "$show_only_this_field" == "name" ]]; then
+			columns=$(append_string_to_array "$columns" "$column_name");
+		elif [[ "$show_only_this_field" == "" ]]; then
+			local column='{}';
+			column=$(append_value_to_object "$column" "name" "$column_name");
+			column=$(append_value_to_object "$column" "type" "$data_type");
+
+			columns=$(append_object_to_array "$columns" "$column");
+		else
+			echo "Error: Only the column name \"name\" can be filtered.";
+			exit 1;
+		fi
+
+	done<<<"$records"
+
+	echo "$columns";
+}
+
 
 get () {
 	local records="$1";
-	local select_fields="$2";
-	local search_string="$3";
-	local limit="$4";
+	local tablename="$2";
+	local select_fields="$3";
+	local search_string="$4";
+	local limit="$5";
 
 	# Search
 	if [[ "$search_string" != "" ]]; then
 		records=$(echo "$records" | grep "$search_string");
 	fi
 
-	local metadata=$(read_metadata);
+	local column_names=$(get_columns "$tablename" "name");
 
 	local record_count=1;
 	record_array='[]';
@@ -111,7 +145,7 @@ get () {
 
 		local key=0;
 		while IFS=$'\n' read value; do
-			local field=$(echo "$metadata" | jq -r ".[$key]");
+			local field=$(echo "$column_names" | jq -r ".[$key]");
 
 			# if a select was given, only continue for those fields that are in it
 			if [[ "$select_fields" == "*" || $(echo "$select_fields" | egrep "^$field\$|^$field,|,$field\$" | wc -l) == 1 ]]; then
@@ -159,10 +193,10 @@ add () {
 
 	# build new record
 	local new_id=$(uuidgen);
-	local new_record=$(build_new_record "$new_id");
+	local new_record=$(build_new_record "$table_name" "$new_id");
 
 	# line number of this table
-	line_number_table=$(grep -n "^### $table_name" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	line_number_table=$(grep -n "^### $table_name\$" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
 	if is_int $line_number_table; then
 
@@ -177,7 +211,7 @@ add () {
 		# if not, just add it on the line below
 		else
 			# calculate new line number to add record at
-			line_number_new_record=$((line_number_table+1))
+			line_number_new_record=$((line_number_table+1));
 
 			sed -i "${line_number_new_record}i$new_record" "$db_file"
 		fi
@@ -195,12 +229,12 @@ add () {
 }
 
 build_new_record () {
-	local id="$1";
-	local fetch_from_old_record="$2";
-	local delim="|o_o|"
+	local tablename="$1";
+	local id="$2";
+	local fetch_from_old_record="$3";
 
 	args=$(echo "$argument_list" | egrep -v 'update|insert|into');
-	local fields=$(read_metadata | jq -r '.[]');
+	local fields=$(get_columns "$tablename" "name" | jq -r '.[]');
 
 	local new_record="$id";
 
@@ -222,7 +256,7 @@ build_new_record () {
 
 			# shall we fetch the value from the previous record in the db?
 			if [[ "$fetch_from_old_record" == 1 ]]; then
-				local value=$(get "$(record_by_id $id)" "$field" "" "" | jq -r ".[].$field");
+				local value=$(get "$(record_by_id $id)" "$tablename" "$field" "" "" | jq -r ".[].$field");
 
 				# jq has null implemented, but shell of course doesn't.
 				if [[ "$value" == "null" ]]; then
@@ -270,8 +304,9 @@ delete () {
 
 update () {
 	local id="$1";
+	local tablename="$2";
 
-	local updated_record=$(build_new_record "$id" 1);
+	local updated_record=$(build_new_record "$tablename" "$id" 1);
 
 	local line_number=$(id_to_line_number "$id");
 
@@ -296,17 +331,20 @@ update () {
 from_table () {
 	table_name="$1";
 
-	cat "$db_file" | sed -n "/### $table_name/,/###/p" | grep -v '^###'
+	cat "$db_file" | sed -n "/### $table_name/,/###/p" | grep -v '^###' | grep -v '^--'
 }
 
 list_tables () {
-	grep '^###' "$db_file" | sed 's/^### //g' | grep -v metadata;
+
+	if [[ -f "$db_file" ]]; then
+		grep '^###' "$db_file" | sed 's/^### //g' | grep -v metadata;
+	fi
 }
 
 table_exists () {
 	tablename="$1";
 
-	if [[ $(echo $(list_tables) | grep "$tablename" | wc -l) == 1 ]]; then
+	if [[ $(echo "$(list_tables)" | grep "^$tablename\$" | wc -l) -ge 1 ]]; then
 		true;
 	else
 		false;
@@ -315,21 +353,35 @@ table_exists () {
 
 create_table () {
 	tablename="$1";
-	#fields="$2";
+	columns="$2";
 
 	if table_exists "$tablename"; then
 		echo "Error: Table \"$tablename\" already exists.";
 		exit 1
 	fi
 
-	printf "\n### $tablename" >> $db_file;
 
-	#if [[ "$fields" != "" ]]; then
+	# does the file exist, and is it not empty?
+	# then we'll add a newline, otherwise not necessary
+	if [[ -s "$db_file" ]]; then
+		printf "\n" >> "$db_file";
+	fi
 
-	#	while IFS=',' read field; do
-	#		echo "$field";
-	#	done<<<"$fields"
-	#fi
+	# add tablename to database
+	printf "### $tablename" >> "$db_file";
+
+	# add columns
+	columns=$(echo "$columns" | tr ',' '\n')
+
+	while IFS=',' read column; do
+		local name=$(echo "$column" | awk '{print $1}');
+		local type=$(echo "$column" | awk '{print $2}');
+
+		# commit column record to database
+		printf "\n--$name$delim$type" >> $db_file;
+	done<<<"$columns"
+
+	echo "OK";
 }
 
 

@@ -1,55 +1,27 @@
-### metadata
-1|o_o|id|o_o|int
-2|o_o|title|o_o|text
-3|o_o|value|o_o|text
-4|o_o|cake|o_o|text
-5|o_o|what|o_o|text
-6|o_o|no|o_o|text
 ### awesome
-50f6bd9e-2af8-4db2-80fb-e8656cdd4237|o_o|still working?|o_o||o_o||o_o||o_o|
-4c2a5217-b315-4c2c-8f06-26fe59238202|o_o|CREATING AWESOMESCHz|o_o||o_o||o_o||o_o|
-bdb952a5-4133-4ac4-ad9a-6ac2582ad64f|o_o|wooo0o0o0o0ot|o_o|alsowoot|o_o|delicious ''|o_o|whut|o_o|yes?
-50e983f0-5177-479d-a9a2-3a38b36157dc|o_o|wooo0o0o0o0ot|o_o|alsowoot|o_o|delicious ''|o_o|whut|o_o|
-c1fd096a-57a4-4679-9ee1-63f72f3f083b|o_o|updateTitle|o_o|UPDATEVALUE|o_o|CAKE|o_o|WHAT|o_o|YES
-e6462d32-5f54-42b6-977b-7299de73e8e8|o_o|wooo0o0o0o0ot|o_o|whut
-a2ba97ef-d8b9-417b-a7ba-04eb98ecb7de|o_o|wooo0o0o0o0ot|o_o|whut
-29cfa0b5-52b2-4bbe-9595-583822d3b55a|o_o|wooo0o0o0o0ot|o_o|whut
-9ab014ac-4bc2-4209-8409-a51c8a889f9c|o_o|wooo0o0o0o0ot|o_o|whut
-06a8d538-e638-4935-8f5c-d865c68a566e|o_o|wooo0o0o0o0ot|o_o|whut
-ef1eb498-4015-4327-b4d0-b204dbf70565|o_o|wooo0o0o0o0ot|o_o|whut
-3c33d651-d910-4cd9-b3e2-579f2f2db00b|o_o|wooo0o0o0o0ot|o_o|whut
-4dbd6644-ab6c-4b0a-9a76-d6fdbe2cc005|o_o|wooo0o0o0o0ot|o_o|whut
-3c0c88aa-9317-4deb-afe2-11262e77dd30|o_o|wooo0o0o0o0ot|o_o|whut
-8a0b87bd-693d-41a7-8c63-3ffe1d6316db|o_o|wooo0o0o0o0ot|o_o|whut
-60dec6c6-38bc-4d52-b16a-976bff78f2d5|o_o|wooo0o0o0o0ot|o_o|alsowoot
-8bded438-5660-4b38-85f9-7f868005425c|o_o|testinserttitle|o_o|testinsertvalue
-4371cbd2-1073-4fea-a340-6497eac1939d|o_o|creationtest|o_o|creationtestvalue
-b925b98b-4cd3-4b88-bee8-902006e56c4a|o_o|chocolate cake|o_o|it's fucking amazing
-ce9ddee4-3d80-4aa3-a6ea-dad2986f1eed|o_o|chocolate cake|o_o|it's fucking amazing
-d4f706a9-4b80-4f8a-98e2-7ee926027642|o_o|chocolate cake|o_o|it's fucking amazing
-97384d83-6053-49a8-bbf7-e65657d0e17f|o_o|chocolate cake|o_o|it's fucking amazing
-339bbd5b-8909-4941-93d0-675ec0f2b5ef|o_o|chocolate cake|o_o|it's fucking amazing
-dcee8d98-85be-4060-99d6-debcfd104dfe|o_o|chocolate cake|o_o|it's fucking amazing
-6a2fe6db-1228-48bb-9246-43292a4beea7|o_o|chocolate cake|o_o|it's fucking amazing
-44ef2f6b-4390-4b3c-9802-d217cd357dfc|o_o|chocolate cake|o_o|it's fucking amazing
-11250c5c-ce5e-48a9-b806-ccf2bda9f841|o_o|stroopwafel cake|o_o|fucking delicious
-8313b985-7b55-465e-ac60-da5a371a347b|o_o|chocolate|o_o|cake
-b3f38630-6247-4ef5-9f9b-d7d86afd83dd|o_o|chocolate|o_o|cake
-72d42f53-ff1a-4acd-bc65-e73b1f3f0082|o_o|chocolate|o_o|cake
-63c9f627-2afe-4e9a-a4f1-e9856bd4d003|o_o|chocolate|o_o|cake
-208e76ed-a2e0-4d14-b548-649a620f2788|o_o|chocolate|o_o|cake
-e38ecdb1-597b-442e-8562-2074c95443a5|o_o|chocolate|o_o|cake
-24903076-05ce-4ff0-b0f2-fcf068a2dea5|o_o|another test|o_o|yeppp i love meself some testsss
-6ec2b090-eb9b-4034-9049-cf1ee2d6b347|o_o|BDSM emblem explained|o_o|http://bdsm-emblemzz.com
-88888090-eb9b-4034-9049-cf1ee2d68888|o_o|new test title|o_o|new test value wooooot
-314|o_o|open graph image size|o_o|https://iamturns.com/open-graph-image-size/
-871c8134-7bc5-4216-96e8-e192fdabc8a6|o_o|bash jokes|o_o|https://www.sanitarium.net/jokes/getjoke.cgi?71|o_o|bash jokes|o_o||o_o|kjghASf,,d,,|o_o|bash
-316|o_o|facebook fb batch invalidator|o_o|https://developers.facebook.com/tools/debug/sharing/batch/
+03be72ec-5807-4df8-b97b-9f9343e21a62|o_o|some title woot|o_o|no descr|o_o|https://google.com/
+--id|o_o|int
+--title|o_o|text
+--description|o_o|text
+--url|o_o|text
+6ec2b090-eb9b-4034-9049-cf1ee2d6b347|o_o|bdsm explained|o_o|Best BDSM website evarrr|o_o|http://bdsm-emblem.com
+88888090-eb9b-4034-9049-cf1ee2d68888|o_o|Consolia|o_o|Webcomic of the gods|o_o|https://consolia-comic.com
+314|o_o|open graph image size|o_o|Sourced from popular websites since the standard is fucked|o_o|https://iamturns.com/open-graph-image-size/
+871c8134-7bc5-4216-96e8-e192fdabc8a6|o_o|bash jokes|o_o|i don't git it.|o_o|https://www.sanitarium.net/jokes/getjoke.cgi?71
+316|o_o|facebook fb batch invalidator|o_o|Fix / debug issues with sharing pages on FB|o_o|https://developers.facebook.com/tools/debug/sharing/batch/
 ### linux
+--id|o_o|int
+--title|o_o|text
+--content|o_o|text
 320|o_o|git flow|o_o|git flow
 321|o_o|git push|o_o|git flow
 317|o_o|update git repo|o_o|git pull
 318|o_o|set default canvas inkscape|o_o|sudo cp /home/tim/Desktop/default.svg /var/lib/flatpak/app/org.inkscape.Inkscape/current/active/files/share/inkscape/templates/default.svg
 319|o_o|flatpak run inkscape|o_o|flatpak run org.inkscape.Inkscape
-### testtable
-f3a7f103-6c19-4965-9803-9858170396f5|o_o|wooo0o0o0o0ot|o_o|alsowoot
+### newtable
+52909002-8199-4519-8ba8-d7c457d123dd|o_o|tiiiitle|o_o||o_o|woooooot content|o_o|20
+--id|o_o|int
+--title|o_o|text
+--description|o_o|text
+--content|o_o|text
+--views|o_o|int

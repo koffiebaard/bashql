@@ -55,6 +55,14 @@ string_in_array () {
 	fi
 }
 
+append_value_to_object () {
+	local object="$1";
+	local field="$2";
+	local value="$3";
+
+	echo "$object" | jq ". | .[\"$field\"]=\"$value\"";
+}
+
 argument_list="";
 
 # cli params will be dynamic variables
