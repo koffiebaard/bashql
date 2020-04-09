@@ -25,3 +25,31 @@
 --description|o_o|text
 --content|o_o|text
 --views|o_o|int
+--choccake|o_o|int
+--creamcake|o_o|int
+### newtableauxuu
+--id|o_o|int
+--title|o_o|text
+--views|o_o|int
+### newtableaux
+073cd69e-8778-4ae4-aa31-c07bb64048e2|o_o|tiiiiitle|o_o|666|o_o|tiiiiitle|o_o|666|o_o||o_o||o_o|
+67062232-ada7-42c8-9d3a-bc16702632cb|o_o|title? yes, another.|o_o|20|o_o|title? yes, another.|o_o|20|o_o||o_o||o_o|
+98052d03-7a70-410f-acbc-ad622e343404|o_o|woot title|o_o|20|o_o|woot title|o_o|20|o_o||o_o||o_o|
+--id|o_o|int
+--title|o_o|text
+--views|o_o|int
+### newtableauxxx
+4b7d4db7-1b84-4bff-a90a-6b88df371d2d|o_o|YAY TIIITTLEEEELLFLFLFL|o_o|20|o_o||o_o||o_o|
+42c63d2a-f6c3-4a07-b665-2ae2e3f1ccee|o_o|YAY TIIITTLEEEELLFLFLFL|o_o|20
+22ce1a48-710b-4e2a-94a5-4e1c26cae441|o_o|YAY TIIITTLEEEELLFLFLFL|o_o|20
+87adb8c1-0b0e-4915-8350-131e94f774f6|o_o|YAY TIIITTLEEEELLFLFLFL|o_o|20
+--id|o_o|int
+--title|o_o|text
+--views|o_o|int
+--creamcak|o_o|int
+--creamcac|o_o|int
+--creamcack|o_o|int
+### invalidcolumntest
+--id|o_o|text
+--content|o_o|text
+--cake|o_o|int

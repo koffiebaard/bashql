@@ -6,6 +6,7 @@ source "$curdir/lib/internals.sh";
 
 delim="|o_o|";
 
+
 record_by_id () {
 	id="$1";
 
@@ -38,60 +39,18 @@ id_belongs_to_table () {
 	fi
 }
 
-#get () {
-#	local records="$1";
-#	local field_names="$2";
-#	local search_string="$3";
-#
-#	if [[ "$search_string" != "" ]]; then
-#		records=$(echo "$records" | grep "$search_string");
-#	fi
-#
-#	field_ids=$(field_names_to_ids "$field_names")
-#
-#	local retrieved_fields=$(get_field_from_record "$records" $field_ids);
-#
-#	echo "$retrieved_fields" | sed '/^$/d';
-#}
-
-field_names_to_ids () {
-	local field_names="$1";
-
-	local field_ids=""
-
-	for field_name in $(echo "$field_names" | tr ' ' '\n'); do
-
-		local field_id=$(field_name_to_id "$field_name");
-
-		field_ids=$(append "$field_ids" "$field_id" ",\\")
-	done
-
-	echo "$field_ids";
-}
-
-read_metadata () {
-
-	local records=$(from_table "metadata");
-
-	titles=$(echo "$records" | sed "s/^\([0-9a-z\-]*\)|o_o|\([0-9a-zA-Z _-]*\)|o_o|\(.*\)/\\2/g");
-
-	local fields='[]';
-
-	while read title; do
-
-		fields=$(append_string_to_array "$fields" "$title");
-
-	done<<<"$titles"
-
-	echo "$fields";
-}
 
 get_columns () {
 	table_name="$1";
 	show_only_this_field="$2";
 
+	if ! table_exists "$table_name"; then
+		echo "Error: Table \"$table_name\" does not exist.";
+		exit 1;
+	fi
+
 	local columns='[]';
-	local records=$(cat "$db_file" | sed -n "/### $table_name/,/###/p" | grep '^--');
+	local records=$(cat "$db_file" | sed -n "/### $table_name\$/,/###/p" | grep '^--');
 
 	while read record; do
 
@@ -147,6 +106,11 @@ get () {
 		while IFS=$'\n' read value; do
 			local field=$(echo "$column_names" | jq -r ".[$key]");
 
+			# just in case the column count is off, just don't show any unknown fields
+			if [[ "$field" == "null" ]]; then
+				continue;
+			fi
+
 			# if a select was given, only continue for those fields that are in it
 			if [[ "$select_fields" == "*" || $(echo "$select_fields" | egrep "^$field\$|^$field,|,$field\$" | wc -l) == 1 ]]; then
 
@@ -173,13 +137,14 @@ get () {
 	echo "$record_array";
 }
 
+
 get_field_from_record () {
 	record="$1";
 	field_id="$2";
 
-	#echo "$record" | sed "s/^\([0-9a-z\-]*\)|o_o|\([0-9a-zA-Z _-]*\)|o_o|\(.*\)/\\$field_id/g"
 	echo "$record" | sed "s/^\([0-9a-z\-]*\)|o_o|\([0-9a-zA-Z _-]*\)[|o_o|]*\(.*\)[|o_o|]*\(.*\)[|o_o|]*\(.*\)/\\$field_id/g"
 }
+
 
 field_name_to_id () {
 	field_name="$1";
@@ -187,6 +152,7 @@ field_name_to_id () {
 
 	get_field_from_record "$field_record" 1
 }
+
 
 add () {
 	local table_name="$1"
@@ -200,21 +166,7 @@ add () {
 
 	if is_int $line_number_table; then
 
-		# calculate last line count
-		local last_linecount=$(cat "$db_file" | wc -l);
-		((last_linecount++));
-
-		# is the table on the last line in the file? add the record on a new line.
-		if [[ "$line_number_table" == "$last_linecount" ]]; then
-			printf "\n$new_record" >> "$db_file";
-
-		# if not, just add it on the line below
-		else
-			# calculate new line number to add record at
-			line_number_new_record=$((line_number_table+1));
-
-			sed -i "${line_number_new_record}i$new_record" "$db_file"
-		fi
+		commit_to_db "$new_record" "$line_number_table"
 
 		if id_in_db "$new_id"; then
 			echo "$new_id";
@@ -227,6 +179,7 @@ add () {
 		exit 1;
 	fi
 }
+
 
 build_new_record () {
 	local tablename="$1";
@@ -331,7 +284,7 @@ update () {
 from_table () {
 	table_name="$1";
 
-	cat "$db_file" | sed -n "/### $table_name/,/###/p" | grep -v '^###' | grep -v '^--'
+	cat "$db_file" | sed -n "/### $table_name\$/,/###/p" | grep -v '^###' | grep -v '^--'
 }
 
 list_tables () {
@@ -360,15 +313,11 @@ create_table () {
 		exit 1
 	fi
 
-
-	# does the file exist, and is it not empty?
-	# then we'll add a newline, otherwise not necessary
-	if [[ -s "$db_file" ]]; then
-		printf "\n" >> "$db_file";
-	fi
-
 	# add tablename to database
-	printf "### $tablename" >> "$db_file";
+	commit_to_db "### $tablename" "end";
+
+	# add ID as first column
+	commit_to_db "--id${delim}text" "end";
 
 	# add columns
 	columns=$(echo "$columns" | tr ',' '\n')
@@ -377,8 +326,19 @@ create_table () {
 		local name=$(echo "$column" | awk '{print $1}');
 		local type=$(echo "$column" | awk '{print $2}');
 
+		if [[ "$name" == "id" ]]; then
+			>&2 echo "Warning: ID column is added automatically. Skipping..";
+			continue;
+		fi
+
+		if ! valid_column_type "$type"; then
+			>&2 echo "Warning: column \"$name\" has invalid data type \"$type\". Skipping..";
+			continue;
+		fi
+
 		# commit column record to database
-		printf "\n--$name$delim$type" >> $db_file;
+		commit_to_db "--$name$delim$type" "end";
+
 	done<<<"$columns"
 
 	echo "OK";
@@ -425,6 +385,88 @@ drop_table () {
 }
 
 
+add_column () {
+	local tablename="$1";
+	local name="$2";
+	local type="$3";
+	local compiled_column="--$name$delim$type";
+
+	if ! table_exists "$tablename"; then
+		echo "Error: table \"$tablename\" doesn't exist.";
+		exit 1;
+	elif column_exists "$tablename" "$name"; then
+		echo "Error: column \"$name\" already exists.";
+		exit 1;
+	elif ! valid_column_type "$type"; then
+		echo "Error: column type \"$type\" is not valid.";
+		exit 1;
+	fi
+
+	# get line count for last column
+	local last_column_linecount=$(cat -n "$db_file" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $tablename/,/###/p" | \
+		grep '^[[:space:]]*[0-9]*[[:space:]]*--' | \
+		tail -n1 | \
+		awk '{print $1}');
+
+	commit_to_db "$compiled_column" "$last_column_linecount";
+
+	echo "OK";
+}
+
+
+column_exists () {
+	local tablename="$1";
+	local column="$2";
+
+	local columns_in_db=$(get_columns "$tablename" "name" | jq -r '.[]');
+
+	if [[ $(echo "$columns_in_db" | grep "^$column\$" | wc -l) -ge 1 ]]; then
+		true;
+	else
+		false;
+	fi
+}
+
+valid_column_type () {
+	local type="$1";
+
+	if [[ "$type" == "text" || "$type" == "int" ]]; then
+		true;
+	else
+		false;
+	fi
+}
+
+commit_to_db () {
+	local record="$1";
+	local at_linecount="$2";
+	local last_linecount=$(get_last_linecount "$db_file");
+
+
+	# is it the last line in the file? add on a new line.
+	if [[ "$at_linecount" == "$last_linecount" || "$at_linecount" == "end" ]]; then
+		☕ "adding at the end..";
+
+		# does the file exist, and is it not empty?
+		# then we'll add a newline, otherwise not necessary
+		if [[ -s "$db_file" ]]; then
+			printf "\n" >> "$db_file";
+		fi
+
+		printf '%s' "$record" >> "$db_file";
+
+	# if not, just add it on the line below
+	else
+		☕ "adding after line $at_linecount..";
+		# calculate new line number to add the column at
+		at_linecount=$((at_linecount+1));
+
+		sed -i "${at_linecount}i$record" "$db_file"
+	fi
+}
+
+
 delete_line_by_number () {
 	local line_number="$1";
 	local last_linecount=$(get_last_linecount "$db_file");
@@ -459,11 +501,3 @@ get_last_linecount () {
 
 	echo "$last_linecount";
 }
-
-
-
-
-
-
-
-

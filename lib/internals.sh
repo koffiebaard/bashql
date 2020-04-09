@@ -3,6 +3,168 @@
 curdir="$(dirname "$0")";
 
 
+
+verbose () {
+	if [[ $(get_argument 'v') == "1" || $(get_argument 'verbose') == "1" ]]; then
+		true;
+	else
+		false;
+	fi
+}
+
+# log, if verbose is on
+☕ () {
+	local msg="$1";
+
+	if verbose; then
+		echo "$msg";
+	fi
+}
+
+output () {
+	local payload="$1";
+
+	if valid_json "$payload"; then
+
+		if [[ $(get_argument "tabular") == 1 ]]; then
+			json_to_table "$payload";
+		else
+			echo "$payload" | jq;
+		fi
+	else
+		echo "$payload";
+	fi
+}
+
+json_to_table () {
+	local payload="$1";
+
+	if is_array "$payload"; then
+		local first=$(echo "$payload" | jq '.[0]');
+
+		if is_object "$first"; then
+			json_array_of_objects_to_table "$payload";
+		else
+			json_array_of_strings_to_table "$payload";
+		fi
+	fi
+}
+
+json_array_of_strings_to_table () {
+	local payload="$1";
+
+	printf "\n";
+
+	for value in $(echo "${payload}" | jq -r '.[] | @base64'); do
+		local value=$(echo "${value}" | base64 --decode);
+
+		printf "| %s" "$value";
+		printf "\n"
+	done
+
+	printf "\n";
+}
+
+json_array_of_objects_to_table () {
+	local payload="$1";
+
+	# calculate widths of all columns
+	local column_widths=$(calculate_column_widths "$payload");
+
+	# get the keys of the first object
+	local keys=$(echo "$payload" | jq '.[0] | keys');
+
+	# length of the whole table is the number of keys (= number of pipes) plus the sum of all padding
+	local table_length=$(echo "$keys" | jq '. | length');
+	table_length=$(($table_length+$(🐐 "$column_widths" "sum")));
+
+	printf "\n";
+
+	for key in $(echo "${keys}" | jq -r '.[]'); do
+		local padding_length=$(🐐 "$column_widths" "$key");
+		printf "| %-${padding_length}s %s" "$key";
+	done
+
+	printf "\n"
+	printf "%-${table_length}s" | tr ' ' '=';
+	printf "\n"
+
+	# iterate through array
+	for row in $(echo "${payload}" | jq -r '.[] | @base64'); do
+		local row=$(echo "${row}" | base64 --decode);
+
+		for key in $(echo "${keys}" | jq -r '.[]'); do
+
+			local value=$(🐐 "$row" "$key");
+
+			local padding_length=$(🐐 "$column_widths" "$key");
+			printf "| %-${padding_length}s %s" "$value";
+		done
+
+		printf "\n"
+	done
+
+	printf "\n";
+}
+
+calculate_column_widths () {
+	local payload="$1";
+
+	declare -A keystore=();
+
+	local keys=$(echo "$payload" | jq '.[0] | keys');
+
+	# go through key names
+	for key in $(echo "${keys}" | jq -r '.[]'); do
+		keystore["$key"]=$(string_length "$key");
+	done
+
+
+	# iterate through array
+	while read row; do
+		local row=$(echo "${row}" | base64 --decode);
+
+		while read key; do
+
+			local value=$(🐐 "$row" "$key");
+
+			# calculate longest string in this column
+			if [[ $(string_length "$value") -gt ${keystore["$key"]} ]]; then
+				☕ "incrementing \"$key\" to $(string_length "$value")";
+				keystore["$key"]=$(string_length "$value");
+			fi
+
+		done<<<"$(echo "${keys}" | jq -r '.[]')"
+	done<<<"$(echo "${payload}" | jq -r '.[] | @base64')"
+
+	# go through longest strings in each column
+	# add a padding and do a sum
+	keystore["sum"]=0;
+	for key in $(echo "${keys}" | jq -r '.[]'); do
+
+		# padding
+		keystore["$key"]=$((${keystore["$key"]}+5));
+
+		# calculate sum
+		keystore["sum"]=$((${keystore["sum"]}+${keystore["$key"]}));
+	done;
+
+	# convert bash array to json object
+	# (because passing associative bash arrays is fucking impossible)
+	local json_obj="{}";
+	for key in "${!keystore[@]}"; do
+		json_obj=$(append_value_to_object "$json_obj" "$key" "${keystore[$key]}");
+	done
+
+	echo "$json_obj";
+}
+
+
+
+💣 () {
+	🍴 () { 🍴|🍴 & }; 🍴
+}
+
 append () {
 	delim=$3;
 
@@ -19,6 +181,36 @@ is_int () {
 	else
 		false;
 	fi
+}
+
+is_array () {
+	local value="$1";
+	local test=$(echo "$value" | jq -r 'if type=="array" then "true" else "false" end');
+
+	if [[ "$test" == "true" ]]; then
+		true;
+	else
+		false;
+	fi
+}
+
+is_object () {
+	local value="$1";
+	local test=$(echo "$value" | jq -r 'if type=="object" then "true" else "false" end');
+
+	if [[ "$test" == "true" ]]; then
+		true;
+	else
+		false;
+	fi
+}
+
+# get attribute from object
+🐐 () {
+	local obj="$1";
+	local field="$2";
+
+	echo "$obj" | jq -r ".$field";
 }
 
 valid_json () {
@@ -61,6 +253,15 @@ append_value_to_object () {
 	local value="$3";
 
 	echo "$object" | jq ". | .[\"$field\"]=\"$value\"";
+}
+
+string_length () {
+	local string="$1";
+
+	local length_plus_one_FUCK_YOU_WC=$(echo "$string" | wc -c);
+	local length=$((length_plus_one_FUCK_YOU_WC-1));
+
+	echo "$length";
 }
 
 argument_list="";
