@@ -1,0 +1,17 @@
+### cake
+b2baa440-b0d2-4973-9180-21117de27c16|o_o|Mocha cake|o_o|8|o_o|2|o_o|2|o_o|999
+1d9832e1-485c-45a9-a3d5-7a49996d1956|o_o|Cream pie|o_o|0|o_o|10|o_o|0|o_o|0
+5cf1824e-bba1-4dd1-9666-3c484e277c42|o_o|Chocolate cake|o_o|10|o_o|8|o_o|0|o_o|999
+--id|o_o|text
+--title|o_o|text
+--chocolate|o_o|int
+--cream|o_o|int
+--cookies|o_o|int
+--coffee|o_o|int
+### coffee
+3885aaa2-a8a3-4742-abc7-99673dfc85d2|o_o|Double Espresso|o_o|11
+84ce4364-029c-433f-a9f7-3331266891ad|o_o|Americano|o_o|0
+1988d07a-4fe7-4a59-b769-ba7f319d88cf|o_o|Espresso|o_o|10
+--id|o_o|text
+--title|o_o|text
+--strong|o_o|int
