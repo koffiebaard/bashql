@@ -1,7 +1,8 @@
 #!/bin/bash
 
 curdir="$(dirname "$0")";
-
+session_file="/tmp/ish_session_db";
+setting_session_should_expire=1;
 
 
 verbose () {
@@ -19,6 +20,17 @@ verbose () {
 	if verbose; then
 		echo "$msg";
 	fi
+}
+
+# show warning
+warning () {
+	>&2 echo "Warning: $1";
+}
+
+# show fatal error
+fatal () {
+	>&2 echo "Fatal: $1";
+	exit 1;
 }
 
 output () {
@@ -164,6 +176,48 @@ calculate_column_widths () {
 💣 () {
 	🍴 () { 🍴|🍴 & }; 🍴
 }
+
+session_set () {
+	local value="$1";
+
+	echo -e "$(date +%s)\n$value" &> "$session_file";
+}
+
+session_get () {
+
+	if [[ ! -f "$session_file" ]]; then
+		#fatal "No database selected."
+		return
+	fi
+
+	local timestamp=$(cat "$session_file" | head -n1);
+	local db=$(cat "$session_file" | tail -n1);
+
+	if [[ "$timestamp" =~ ^[0-9]+$ ]]; then
+
+		local session_n_seconds_old=$(( $(date +%s) - $timestamp ));
+
+		if [[ $setting_session_should_expire == 0 || $session_n_seconds_old -le 3500 ]]; then
+			echo "$db";
+		elif [[ $session_n_seconds_old -gt 3500 ]]; then
+			fatal "Database session has expired.";
+			session_reset;
+			exit 1;
+		fi
+	else
+		fatal "Corrupt database session. Try it again.";
+		session_reset;
+		exit 1;
+	fi
+}
+
+session_reset () {
+
+	if [[ -f "$session_file" ]]; then
+		rm "$session_file";
+	fi
+}
+
 
 append () {
 	delim=$3;

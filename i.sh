@@ -2,14 +2,39 @@
 
 curdir="$(dirname "$0")";
 
-db_file="$curdir/data";
-
 source "$curdir/lib/db-connector.sh";
 source "$curdir/tasks.sh";
 
 
-if [[ $(get_argument "showtables") == 1 ]]; then
+# database fetches from the db from anywhere, including the table name
+# run it in the current shell so it can set the global variables
+set_database
+
+if [[ $(database) == "" ]]; then
+
+	# these routes (copied from below) don't need a database connection
+	if  [[ $(get_argument "use") != "" ]] || \
+		[[ $(get_argument "create") != "" && $(get_argument "database") != "" ]] || \
+		[[ $(get_argument "drop") != "" && $(get_argument "database") != "" ]] || \
+		[[ $(get_argument "show") == 1 && $(get_argument "databases") == 1 ]]; then
+
+		printf "";
+	else
+		fatal "Database not selected or doesn't exist.";
+		exit 1;
+	fi
+fi
+
+
+
+if [[ $(get_argument "use") != "" ]]; then
+	task_persist_database
+
+elif [[ $(get_argument "show") == 1 && $(get_argument "tables") == 1 ]]; then
 	task_list_tables
+
+elif [[ $(get_argument "show") == 1 && $(get_argument "databases") == 1 ]]; then
+	task_list_databases
 
 elif [[ $(get_argument "describe") != "" ]]; then
 	task_info_table
@@ -41,6 +66,12 @@ elif [[ $(get_argument "drop") != "" && $(get_argument "table") != "" ]]; then
 elif [[ $(get_argument "alter") != "" && $(get_argument "table") != "" && $(get_argument "addcolumn") != "" ]]; then
 	task_add_column
 
+elif [[ $(get_argument "create") != "" && $(get_argument "database") != "" ]]; then
+	task_create_database
+
+elif [[ $(get_argument "drop") != "" && $(get_argument "database") != "" ]]; then
+	task_drop_database
+
 elif [[ $(get_argument 'help') == 1 ]]; then
 
 	echo "i.sh v0.1"
@@ -62,9 +93,6 @@ elif [[ $(get_argument 'help') == 1 ]]; then
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--delete $(tput sgr0)$(tput setaf 6)--from=$(tput sgr0)table $(tput setaf 6)--id=$(tput sgr0)id"
 	echo ""
 	echo "$(tput setaf 7)Tables$(tput sgr0)"
-	echo "	$(tput setaf 7)Show tables$(tput sgr0)"
-	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--showtables$(tput sgr0)"
-	echo ""
 	echo "	$(tput setaf 7)Describe table$(tput sgr0)"
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--describe=$(tput sgr0)table"
 	echo ""
@@ -77,6 +105,19 @@ elif [[ $(get_argument 'help') == 1 ]]; then
 	echo "	$(tput setaf 7)Add column$(tput sgr0)"
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--alter $(tput sgr0)$(tput setaf 6)--table=$(tput sgr0)table $(tput setaf 6)--addcolumn=$(tput sgr0)'name type'"
 	echo ""
+	echo "$(tput setaf 7)Databases$(tput sgr0)"
+	echo "	$(tput setaf 7)Select database$(tput sgr0)"
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--use=$(tput sgr0)database"
+	echo ""
+	echo "	$(tput setaf 7)Database in tablename$(tput sgr0)"
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--select=$(tput sgr0)* $(tput setaf 6)--from=$(tput sgr0)database.table"
+	echo ""
+	echo "$(tput setaf 7)Structure$(tput sgr0)"
+	echo "	$(tput setaf 7)Show tables$(tput sgr0)"
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--show --tables$(tput sgr0)"
+	echo ""
+	echo "	$(tput setaf 7)Show databases$(tput sgr0)"
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--show --databases$(tput sgr0)"
 else
 
 	echo "Sorry, i do not recognize your command."

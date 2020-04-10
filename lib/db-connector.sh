@@ -1,11 +1,116 @@
 #!/bin/bash
 
 curdir="$(dirname "$0")";
+db_dir="$curdir/data";
+database_cached="";
+db_file="";
+delim="|o_o|";
 
 source "$curdir/lib/internals.sh";
 
-delim="|o_o|";
 
+
+
+
+# potentially remove the database from the table name
+filter_table () {
+	local table="$1";
+
+	echo "$table" | sed 's/^\([a-zA-Z0-9_]*\)\.\(.*\)/\2/g';
+}
+
+select_database () {
+	local db="$1";
+
+	database_cached="$db";
+	db_file="$db_dir/$db";
+}
+
+database () {
+
+	if [[ "$database_cached" != "" ]]; then
+		echo "$database_cached";
+	fi
+}
+
+set_database () {
+
+	# db already determined? stop
+	if [[ "$database_cached" != "" ]]; then
+		return;
+	fi
+
+	tables=("describe" "from" "into" "table");
+
+	for table in ${tables[@]}; do
+
+		if [[ "$(get_argument "$table")" == *"."* ]]; then
+	 		possible_database=$(echo "$(get_argument "$table")" | sed 's/^\([a-zA-Z0-9_]*\)\..*/\1/g');
+
+	 		if db_exists "$possible_database"; then
+	 			select_database "$possible_database";
+	 			return
+	 		elif [[ "$possible_database" != "" ]]; then
+	 			fatal "Database \"$possible_database\" doesn't exist."
+	 			return;
+	 		fi
+	 	fi
+ 	done
+
+	local db=$(session_get);
+
+	if db_exists "$db"; then
+		select_database "$db";
+	else
+		session_reset;
+	fi
+}
+
+create_database () {
+	local db="$1";
+
+	if db_exists "$db"; then
+		fatal "Database already exists.";
+		exit 1;
+	fi
+
+	touch "$db_dir/$db";
+
+	if db_exists "$db"; then
+		echo "OK";
+	else
+		fatal "Unknown error. Database could not be created.";
+		exit 1;
+	fi
+}
+
+drop_database () {
+	local db="$1";
+
+	if ! db_exists "$db"; then
+		fatal "Database doesn't exist. Can't be dropped.";
+		exit 1;
+	fi
+
+	rm "$db_dir/$db";
+
+	if ! db_exists "$db"; then
+		echo "OK";
+	else
+		fatal "Unknown error. Database could not be dropped.";
+		exit 1;
+	fi
+}
+
+db_exists () {
+	local db="$1";
+
+	if [[ -f "$db_dir/$db" ]]; then
+		true;
+	else
+		false;
+	fi
+}
 
 record_by_id () {
 	id="$1";
@@ -88,6 +193,12 @@ get () {
 	# Search
 	if [[ "$search_string" != "" ]]; then
 		records=$(echo "$records" | grep "$search_string");
+	fi
+
+	# nothing found? return empty array
+	if [[ "$records" == "" ]]; then
+		echo "[]";
+		exit 0;
 	fi
 
 	local column_names=$(get_columns "$tablename" "name");
