@@ -2,8 +2,20 @@
 
 curdir="$(dirname "$0")";
 session_file="/tmp/ish_session_db";
+log_dir="$curdir/log";
 setting_session_should_expire=0;
 
+set -eE -o functrace
+
+failure() {
+	local lineno=$1
+	local msg=$2
+
+	>&2 echo "Failed at $lineno: $msg"
+	log_error "Failed at $lineno: $msg"
+}
+
+trap 'failure ${BASH_SOURCE}:${LINENO} "$BASH_COMMAND"' ERR
 
 verbose () {
 	if [[ $(get_argument 'v') == "1" || $(get_argument 'verbose') == "1" ]]; then
@@ -13,6 +25,7 @@ verbose () {
 	fi
 }
 
+# 🎂
 # log, if verbose is on
 ☕ () {
 	local msg="$1";
@@ -31,6 +44,18 @@ warning () {
 fatal () {
 	>&2 echo "Fatal: $1";
 	exit 1;
+}
+
+log_error () {
+	local message="$1";
+
+	# make sure the dir & file are there
+	if [[ ! -f "$log_dir/error.log" ]]; then
+		mkdir -p "$log_dir";
+		touch "$log_dir/error.log";
+	fi
+
+	echo "[$(date "+%Y-%m-%d %H:%M:%S")] $message. Called with params: $sanitized_arguments" >> "$log_dir/error.log";
 }
 
 output () {

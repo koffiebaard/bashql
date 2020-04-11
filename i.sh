@@ -5,6 +5,8 @@ curdir="$(dirname "$0")";
 source "$curdir/lib/db-connector.sh";
 source "$curdir/tasks.sh";
 
+sanitized_arguments=$(echo "$@" | sed 's/\(--[a-zA-Z_]*\)/\n\1\n/g' | grep "^--" | paste -sd " ");
+
 
 # database fetches from the db from anywhere, including the table name
 # run it in the current shell so it can set the global variables
@@ -104,7 +106,7 @@ elif [[ $(get_argument 'help') == 1 ]]; then
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--describe=$(tput sgr0)table"
 	echo ""
 	echo "	$(tput setaf 7)Create table$(tput sgr0)"
-	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--create $(tput sgr0)$(tput setaf 6)--table=$(tput sgr0)table $(tput setaf 6)--columns=$(tput sgr0)\"column1 text, column2 int, etc int\""
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--create $(tput sgr0)$(tput setaf 6)--table=$(tput sgr0)table $(tput setaf 6)--columns=$(tput sgr0)\"column1 text, column2 int, etc bool\""
 	echo ""
 	echo "	$(tput setaf 7)Drop table$(tput sgr0)"
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--drop $(tput sgr0)$(tput setaf 6)--table=$(tput sgr0)table"
