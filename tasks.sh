@@ -137,6 +137,14 @@ task_list_tables () {
 	output "$payload";
 }
 
+task_rename_table () {
+	local tablename="$(filter_table $(get_argument 'table'))";
+	local new_tablename="$(filter_table $(get_argument 'to'))";
+
+	local payload=$(rename_table "$tablename" "$new_tablename");
+	output "$payload";
+}
+
 task_list_databases () {
 
 	# convert list of strings to json array
@@ -185,5 +193,13 @@ task_drop_database () {
 	local database_name="$(get_argument "database")";
 
 	local payload=$(drop_database "$database_name");
+	output "$payload";
+}
+
+task_rename_database () {
+	local databasename="$(get_argument 'database')";
+	local new_databasename="$(get_argument 'to')";
+
+	local payload=$(rename_database "$databasename" "$new_databasename");
 	output "$payload";
 }

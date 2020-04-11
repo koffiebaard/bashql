@@ -74,6 +74,10 @@ create_database () {
 		exit 1;
 	fi
 
+	if ! valid_db_name "$db"; then
+		exit 1;
+	fi
+
 	touch "$db_dir/$db";
 
 	if db_exists "$db"; then
@@ -100,6 +104,24 @@ drop_database () {
 		fatal "Unknown error. Database could not be dropped.";
 		exit 1;
 	fi
+}
+
+rename_database () {
+	local db_name="$1"
+	local new_db_name="$2";
+
+	if ! db_exists "$db_name"; then
+		echo "Error: Database \"$db_name\" does not exist.";
+		exit 1;
+	fi
+
+	if ! valid_db_name "$new_db_name"; then
+		exit 1;
+	fi
+
+	mv "$db_dir/$db_name" "$db_dir/$new_db_name"
+
+	echo "OK";
 }
 
 db_exists () {
@@ -424,33 +446,45 @@ create_table () {
 		exit 1
 	fi
 
+	if ! valid_table_name "$tablename"; then
+		exit 1;
+	fi
+
 	# add tablename to database
 	commit_to_db "### $tablename" "end";
 
 	# add ID as first column
 	commit_to_db "--id${delim}text" "end";
 
-	# add columns
-	columns=$(echo "$columns" | tr ',' '\n')
+	# add columns, if present
+	if [[ "$columns" != "" ]]; then
 
-	while IFS=',' read column; do
-		local name=$(echo "$column" | awk '{print $1}');
-		local type=$(echo "$column" | awk '{print $2}');
+		columns=$(echo "$columns" | tr ',' '\n')
 
-		if [[ "$name" == "id" ]]; then
-			>&2 echo "Warning: ID column is added automatically. Skipping..";
-			continue;
-		fi
+		while IFS=',' read column; do
+			local name=$(echo "$column" | awk '{print $1}');
+			local type=$(echo "$column" | awk '{print $2}');
 
-		if ! valid_column_type "$type"; then
-			>&2 echo "Warning: column \"$name\" has invalid data type \"$type\". Skipping..";
-			continue;
-		fi
+			if [[ "$name" == "id" ]]; then
+				>&2 echo "Warning: ID column is added automatically. Skipping..";
+				continue;
+			fi
 
-		# commit column record to database
-		commit_to_db "--$name$delim$type" "end";
+			if ! valid_column_name "$name"; then
+				>&2 echo "Warning: column name \"$name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _. Skipping..";
+				continue;
+			fi
 
-	done<<<"$columns"
+			if ! valid_column_type "$type"; then
+				>&2 echo "Warning: column \"$name\" has invalid data type \"$type\". Skipping..";
+				continue;
+			fi
+
+			# commit column record to database
+			commit_to_db "--$name$delim$type" "end";
+
+		done<<<"$columns"
+	fi
 
 	echo "OK";
 }
@@ -508,6 +542,9 @@ add_column () {
 	elif column_exists "$tablename" "$name"; then
 		echo "Error: column \"$name\" already exists.";
 		exit 1;
+	elif ! valid_column_name "$name"; then
+		echo "Column name \"$name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _.";
+		exit 1;
 	elif ! valid_column_type "$type"; then
 		echo "Error: column type \"$type\" is not valid.";
 		exit 1;
@@ -547,6 +584,24 @@ valid_column_type () {
 	else
 		false;
 	fi
+}
+
+rename_table () {
+	local tablename="$1"
+	local new_tablename="$2";
+
+	if ! table_exists "$tablename"; then
+		echo "Error: Table \"$tablename\" does not exist.";
+		exit 1;
+	fi
+
+	if ! valid_table_name "$new_tablename"; then
+		exit 1;
+	fi
+
+	sed -i "s/^### $tablename$/### $new_tablename/g" "$db_file";
+
+	echo "OK";
 }
 
 commit_to_db () {
@@ -611,4 +666,50 @@ get_last_linecount () {
 	((last_linecount++));
 
 	echo "$last_linecount";
+}
+
+valid_db_name () {
+	local db_name="$1";
+
+	if [[ $(string_length "$db_name") -le 2 ]]; then
+		fatal "Database name must be at least 3 characters"
+		false;
+	fi
+
+	if ! [[ "$db_name" =~ ^[a-zA-Z0-9_]+$ ]]; then
+		fatal "Database name can only contain a-z A-Z 0-9 _";
+		false;
+	fi
+
+	true;
+}
+
+valid_table_name () {
+	local table_name="$1";
+
+	if [[ $(string_length "$table_name") -le 2 ]]; then
+		fatal "Table name must be at least 3 characters"
+		false;
+	fi
+
+	if ! [[ "$table_name" =~ ^[a-zA-Z0-9_]+$ ]]; then
+		fatal "Table name can only contain a-z A-Z 0-9 _";
+		false;
+	fi
+
+	true;
+}
+
+valid_column_name () {
+	local column_name="$1";
+
+	if [[ $(string_length "$column_name") -le 2 ]]; then
+		#>&2 echo "Column name must be at least 3 characters"
+		false;
+	elif ! [[ "$column_name" =~ ^[a-zA-Z0-9_]+$ ]]; then
+		#>&2 echo "Column name can only contain a-z A-Z 0-9 _";
+		false;
+	else
+		true;
+	fi
 }

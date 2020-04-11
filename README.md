@@ -41,7 +41,7 @@ Error: Table "tabletesTTT" does not exist.
 
 # Show table info (incorrect database name)
 $ i.sh --describe=cake.tabletest
-Fatal: Database "cake" doesn\'t exist.
+Fatal: Database "cake" doesn't exist.
 
 # Show table info (default is json)
 $ i.sh --describe=tabletest
