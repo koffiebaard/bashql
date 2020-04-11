@@ -192,7 +192,7 @@ get () {
 
 	# Search
 	if [[ "$search_string" != "" ]]; then
-		records=$(echo "$records" | grep "$search_string");
+		records=$(echo "$records" | grep -i  "$search_string");
 	fi
 
 	# nothing found? return empty array
@@ -223,7 +223,7 @@ get () {
 			fi
 
 			# if a select was given, only continue for those fields that are in it
-			if [[ "$select_fields" == "*" || $(echo "$select_fields" | egrep "^$field\$|^$field,|,$field\$" | wc -l) == 1 ]]; then
+			if [[ "$select_fields" == "*" || $(echo "$select_fields" | egrep "^$field\$|^$field,|,$field,|,$field\$" | wc -l) == 1 ]]; then
 
 				jq_args+=( --arg "field$field" "$field" )
 				jq_args+=( --arg "value$field" "$value" )

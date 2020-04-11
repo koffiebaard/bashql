@@ -2,7 +2,7 @@
 
 curdir="$(dirname "$0")";
 session_file="/tmp/ish_session_db";
-setting_session_should_expire=1;
+setting_session_should_expire=0;
 
 
 verbose () {
@@ -41,7 +41,12 @@ output () {
 		if [[ $(get_argument "tabular") == 1 ]]; then
 			json_to_table "$payload";
 		else
-			echo "$payload" | jq;
+
+			if [[ $(get_argument "filter") != "" ]]; then
+				echo "$payload" | jq -r ".[].$(get_argument 'filter')";
+			else
+				echo "$payload" | jq .;
+			fi
 		fi
 	else
 		echo "$payload";
