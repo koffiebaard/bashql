@@ -1,8 +1,8 @@
 #!/bin/bash
 
 validate () {
-        is=$2
-        should_be=$3
+        is="$2"
+        should_be="$3"
 
         printf "%-90s%s" "$(tput setaf 7)$1$(tput sgr0)";
 
@@ -16,11 +16,15 @@ validate () {
 
 }
 
+# Dropping test database just in case we failed to remove it previously
+./i.sh --drop --database=automatic_test &> /dev/null
+
 
 # Database
 printf "\n$(tput setaf 3)Database$(tput sgr0)\n"
-validate "select non-existent database" $(./i.sh --use=supertestcake &> /dev/null || echo "naw") "naw"
-validate "select correct database" $(./i.sh --use=example) "OK"
+validate "Select non-existent database" $(./i.sh --use=supertestcake &> /dev/null || echo "naw") "naw"
+validate "Select correct database" $(./i.sh --use=example) "OK"
+validate "Drop non-existent database" $(./i.sh --drop --database=thisonedefinitelydoesnotexist &> /dev/null || echo "naw") "naw"
 
 
 # Select table
@@ -30,5 +34,66 @@ validate "select title from example.coffee where title = double espresso" "$(./i
 validate "show tables has cake & coffee" $(./i.sh --show --tables | egrep 'cake|coffee' | wc -l) "2"
 validate "set --limit to two" $(./i.sh --select=title --from=cake --limit=2 --filter=title | wc -l) "2"
 
+
+# Test flow
+printf "\n$(tput setaf 3)Test flow$(tput sgr0)\n"
+validate "Create database" $(./i.sh --create --database=automatic_test) "OK"
+validate "Create same database again" $(./i.sh --create --database=automatic_test &> /dev/null || echo "naw") "naw"
+validate "Select said database" $(./i.sh --use=automatic_test) "OK"
+
+printf "\n";
+
+validate "show tables (empty)" $(./i.sh --show --tables) "[]"
+validate "create table" $(./i.sh --create --table=test --columns='col_text text, col_int int, col_bool bool') "OK"
+validate "show tables (1 entry)" $(./i.sh --show --tables | jq -r '.[]') "test"
+validate "create table, incorrect data type gives warning" $(./i.sh --create --table=testfaultydatatypezz --columns='col_text CUNT, col_int int, col_bool bool' 2>&1 | grep Warning | wc -l) "1"
+validate "show tables (2 entries)" $(./i.sh --show --tables | jq -r '.[]' | wc -l) "2"
+
+printf "\n";
+
+validate "describe table: Shows 4 fields" $(./i.sh --describe=test | jq -r '.[].name' | egrep 'id|col_text|col_int|col_bool' | wc -l) "4"
+validate "describe table: id has type \"text\"" $(./i.sh --describe=test | jq -r '.[] | select(.name == "id")' | jq -r '.type') "text"
+validate "describe table: col_text has type \"text\"" $(./i.sh --describe=test | jq -r '.[] | select(.name == "col_text")' | jq -r '.type') "text"
+validate "describe table: col_int has type \"int\"" $(./i.sh --describe=test | jq -r '.[] | select(.name == "col_int")' | jq -r '.type') "int"
+validate "describe table: col_bool has type \"bool\"" $(./i.sh --describe=test | jq -r '.[] | select(.name == "col_bool")' | jq -r '.type') "bool"
+
+printf "\n";
+
+insert_id=$(./i.sh --insert --into=test --col_text="This is some random text yay." --col_int=9001 --col_bool=1);
+returncode=$?;
+
+validate "inserted record: returns success" "$returncode" "0"
+validate "inserted record: has valid ID (length check)" $(echo "$insert_id" | wc -c) "37"
+validate "inserted record: has valid ID (regex check)" $(if [[ "$insert_id" =~ [a-f0-9-]* ]]; then echo "yay"; else echo "naww"; fi) "yay"
+
+printf "\n";
+
+validate "select=* --id=n with filter: proper value on id" $(./i.sh --select=* --from=test --id="$insert_id" --filter=id) "$insert_id"
+validate "select=* --id=n with filter: proper value on col_text" "$(./i.sh --select=* --from=test --id="$insert_id" --filter=col_text)" "This is some random text yay."
+validate "select=* --id=n with filter: proper value on col_int" $(./i.sh --select=* --from=test --id="$insert_id" --filter=col_int) "9001"
+validate "select=* --id=n with filter: proper value on col_bool" $(./i.sh --select=* --from=test --id="$insert_id" --filter=col_bool) "1"
+
+printf "\n";
+
+validate "select=id --id=n with filter" $(./i.sh --select=id --from=test --id="$insert_id" --filter=id) "$insert_id"
+validate "select=id --id=n where ID is non existent" $(./i.sh --select=id,col_int,col_bool --from=test --id="nottheresorry") "[]"
+validate "select=col_text --id=n with filter" "$(./i.sh --select=col_text --from=test --id="$insert_id" --filter=col_text)" "This is some random text yay."
+validate "select=id,col_int,col_bool --id=n returns 3 properties" $(./i.sh --select=id,col_int,col_bool --from=test --id="$insert_id" | jq '.[]' | wc -l) "5"
+
+printf "\n";
+
+validate "select=* --find='random text' with filter: proper value on col_int" $(./i.sh --select=* --from=test --find='random text' --filter=col_int) 9001
+validate "select=* --find='9001' with filter: proper value on col_text" "$(./i.sh --select=* --from=test --find='random text' --filter=col_text)" "This is some random text yay."
+validate "select=*: finds one object" "$(./i.sh --select=* --from=test | jq length)" "1"
+validate "select=id: finds one object" "$(./i.sh --select=* --from=test | jq length)" "1"
+
+printf "\n";
+
+validate "update col_text" "$(./i.sh --update=test --id="$insert_id" --col_text='a completely new arbitrary set of characters. whoop whoop.')" "OK"
+validate "update to col_text still there" "$(./i.sh --select=col_text --from=test --id="$insert_id" --filter=col_text)" "a completely new arbitrary set of characters. whoop whoop."
+validate "update col_int" "$(./i.sh --update=test --id="$insert_id" --col_int=9999)" "OK"
+validate "update to col_int still there" "$(./i.sh --select=col_int --from=test --id="$insert_id" --filter=col_int)" "9999"
+validate "update col_bool" "$(./i.sh --update=test --id="$insert_id" --col_bool=0)" "OK"
+validate "update to col_bool still there" "$(./i.sh --select=col_bool --from=test --id="$insert_id" --filter=col_bool)" "0"
 
 printf "\n";

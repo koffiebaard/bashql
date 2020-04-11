@@ -81,7 +81,7 @@ create_database () {
 	touch "$db_dir/$db";
 
 	if db_exists "$db"; then
-		echo "OK";
+		output "OK";
 	else
 		fatal "Unknown error. Database could not be created.";
 		exit 1;
@@ -99,7 +99,7 @@ drop_database () {
 	rm "$db_dir/$db";
 
 	if ! db_exists "$db"; then
-		echo "OK";
+		output "OK";
 	else
 		fatal "Unknown error. Database could not be dropped.";
 		exit 1;
@@ -111,7 +111,7 @@ rename_database () {
 	local new_db_name="$2";
 
 	if ! db_exists "$db_name"; then
-		echo "Error: Database \"$db_name\" does not exist.";
+		fatal "Database \"$db_name\" does not exist.";
 		exit 1;
 	fi
 
@@ -121,7 +121,7 @@ rename_database () {
 
 	mv "$db_dir/$db_name" "$db_dir/$new_db_name"
 
-	echo "OK";
+	output "OK";
 }
 
 db_exists () {
@@ -172,7 +172,7 @@ get_columns () {
 	show_only_this_field="$2";
 
 	if ! table_exists "$table_name"; then
-		echo "Error: Table \"$table_name\" does not exist.";
+		fatal "Table \"$table_name\" does not exist.";
 		exit 1;
 	fi
 
@@ -195,7 +195,7 @@ get_columns () {
 
 			columns=$(append_object_to_array "$columns" "$column");
 		else
-			echo "Error: Only the column name \"name\" can be filtered.";
+			fatal "Only the column name \"name\" can be filtered.";
 			exit 1;
 		fi
 
@@ -219,7 +219,7 @@ get () {
 
 	# nothing found? return empty array
 	if [[ "$records" == "" ]]; then
-		echo "[]";
+		output "[]";
 		exit 0;
 	fi
 
@@ -267,7 +267,7 @@ get () {
 
 	done<<<"$records"
 
-	echo "$record_array";
+	output "$record_array";
 }
 
 
@@ -302,13 +302,13 @@ add () {
 		commit_to_db "$new_record" "$line_number_table"
 
 		if id_in_db "$new_id"; then
-			echo "$new_id";
+			output "$new_id";
 		else
-			echo "Error: Record was not created, cause unknown.";
+			fatal "Record was not created, cause unknown.";
 			exit 1;
 		fi
 	else
-		echo "Error: table \"$table_name\" could not be found.";
+		fatal "Table \"$table_name\" could not be found.";
 		exit 1;
 	fi
 }
@@ -361,7 +361,7 @@ build_new_record () {
 	done
 
 	# yay a new record!
-	echo "$new_record";
+	output "$new_record";
 }
 
 id_to_line_number () {
@@ -385,7 +385,7 @@ delete () {
 		# delete by line number
 		delete_line_by_number "$line_number"
 	else
-		echo "Error deleting record: ID could not be found in database.";
+		fatal "Could not delete record: ID not found in database.";
 		exit 1;
 	fi
 }
@@ -405,9 +405,11 @@ update () {
 		# replace line by line number
 		sed -i "${line_number}s/.*/$escaped_updated_record/" "$db_file";
 	else
-		echo "Error updating record: ID could not be found in database.";
+		fatal "Error updating record: ID not found in database.";
 		exit 1;
 	fi
+
+	output "OK";
 }
 
 
@@ -425,7 +427,7 @@ from_table () {
 list_tables () {
 
 	if [[ -f "$db_file" ]]; then
-		grep '^###' "$db_file" | sed 's/^### //g' | grep -v metadata;
+		grep '^###' "$db_file" | sed 's/^### //g';
 	fi
 }
 
@@ -444,7 +446,7 @@ create_table () {
 	columns="$2";
 
 	if table_exists "$tablename"; then
-		echo "Error: Table \"$tablename\" already exists.";
+		fatal "Table \"$tablename\" already exists.";
 		exit 1
 	fi
 
@@ -468,17 +470,17 @@ create_table () {
 			local type=$(echo "$column" | awk '{print $2}');
 
 			if [[ "$name" == "id" ]]; then
-				>&2 echo "Warning: ID column is added automatically. Skipping..";
+				warning "ID column is added automatically. Skipping..";
 				continue;
 			fi
 
 			if ! valid_column_name "$name"; then
-				>&2 echo "Warning: column name \"$name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _. Skipping..";
+				warning "Column name \"$name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _. Skipping..";
 				continue;
 			fi
 
 			if ! valid_column_type "$type"; then
-				>&2 echo "Warning: invalid data type on column \"$name\". Can only be \"text\", \"int\" or \"bool\". Skipping..";
+				warning "Invalid data type on column \"$name\". Can only be \"text\", \"int\" or \"bool\". Skipping..";
 				continue;
 			fi
 
@@ -488,7 +490,7 @@ create_table () {
 		done<<<"$columns"
 	fi
 
-	echo "OK";
+	output "OK";
 }
 
 
@@ -496,7 +498,7 @@ drop_table () {
 	local tablename="$1";
 
 	if ! table_exists "$tablename"; then
-		echo "Error: Table \"$tablename\" doesn't exist.";
+		fatal "Table \"$tablename\" doesn't exist.";
 		exit 1
 	fi
 
@@ -526,9 +528,11 @@ drop_table () {
 
 		delete_line_by_number "$line_number_table"
 	else
-		echo "Error removing table";
+		fatal "Could not remove table, cause unknown.";
 		exit 1;
 	fi
+
+	output "OK";
 }
 
 
@@ -539,16 +543,16 @@ add_column () {
 	local compiled_column="--$name$delim$type";
 
 	if ! table_exists "$tablename"; then
-		echo "Error: table \"$tablename\" doesn't exist.";
+		fatal "Table \"$tablename\" doesn't exist.";
 		exit 1;
 	elif column_exists "$tablename" "$name"; then
-		echo "Error: column \"$name\" already exists.";
+		fatal "Column \"$name\" already exists.";
 		exit 1;
 	elif ! valid_column_name "$name"; then
-		echo "Column name \"$name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _.";
+		fatal "Column name \"$name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _.";
 		exit 1;
 	elif ! valid_column_type "$type"; then
-		echo "Error: column type \"$type\" is not valid. Can only be \"text\", \"int\" or \"bool\".";
+		fatal "column type \"$type\" is not valid. Can only be \"text\", \"int\" or \"bool\".";
 		exit 1;
 	fi
 
@@ -561,7 +565,7 @@ add_column () {
 
 	commit_to_db "$compiled_column" "$last_column_linecount";
 
-	echo "OK";
+	output "OK";
 }
 
 
@@ -593,7 +597,7 @@ rename_table () {
 	local new_tablename="$2";
 
 	if ! table_exists "$tablename"; then
-		echo "Error: Table \"$tablename\" does not exist.";
+		fatal "Table \"$tablename\" does not exist.";
 		exit 1;
 	fi
 
@@ -603,7 +607,7 @@ rename_table () {
 
 	sed -i "s/^### $tablename$/### $new_tablename/g" "$db_file";
 
-	echo "OK";
+	output "OK";
 }
 
 commit_to_db () {
@@ -665,7 +669,7 @@ get_last_linecount () {
 	local file="$1";
 
 	last_linecount=$(cat "$file" | wc -l);
-	((last_linecount++));
+	last_linecount=$((last_linecount+1));
 
 	echo "$last_linecount";
 }
@@ -730,7 +734,7 @@ sanitize_column_value () {
 
 		# but warn those cunts if they're being cunty
 		if ! is_int "$value"; then
-			>&2 echo "Warning: Column \"$column\" needs to be an integer, not whatever the shit \"$value\" is.";
+			warning "Column \"$column\" needs to be an integer, not whatever the shit \"$value\" is.";
 		fi
 
 	elif [[ "$type" == "bool" ]]; then
@@ -738,9 +742,10 @@ sanitize_column_value () {
 		# good bool.
 		if [[ "$value" == "0" || "$value" == "1" ]]; then
 			echo "$value";
+
 		# bool shit. fucking cunts can't do anything right.
 		else
-			>&2 echo "Warning: Column \"$column\" needs to be a bool, 0 or 1. Please don't send \"$value\" again.";
+			warning "Column \"$column\" needs to be a bool, 0 or 1. Please don't send \"$value\" again.";
 		fi
 
 	elif [[ "$type" == "text" ]]; then

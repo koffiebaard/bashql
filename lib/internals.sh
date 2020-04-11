@@ -11,7 +11,7 @@ failure() {
 	local lineno=$1
 	local msg=$2
 
-	>&2 echo "Failed at $lineno: $msg"
+	#>&2 echo "Failed at $lineno: $msg"
 	log_error "Failed at $lineno: $msg"
 }
 
@@ -58,6 +58,18 @@ log_error () {
 	echo "[$(date "+%Y-%m-%d %H:%M:%S")] $message. Called with params: $sanitized_arguments" >> "$log_dir/error.log";
 }
 
+log () {
+	local message="$1";
+
+	# make sure the dir & file are there
+	if [[ ! -f "$log_dir/info.log" ]]; then
+		mkdir -p "$log_dir";
+		touch "$log_dir/info.log";
+	fi
+
+	echo "[$(date "+%Y-%m-%d %H:%M:%S")] $message" >> "$log_dir/info.log";
+}
+
 output () {
 	local payload="$1";
 
@@ -70,7 +82,7 @@ output () {
 			if [[ $(get_argument "filter") != "" ]]; then
 				echo "$payload" | jq -r ".[].$(get_argument 'filter')";
 			else
-				echo "$payload" | jq .;
+				echo "$payload" | jq '.';
 			fi
 		fi
 	else

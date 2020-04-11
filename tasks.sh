@@ -16,8 +16,7 @@ task_search_in_table () {
 		exit 1;
 	fi
 
-	local payload=$(get "$(from_table $tablename)" "$tablename" "$select" "$search_string" "$limit");
-	output "$payload";
+	get "$(from_table $tablename)" "$tablename" "$select" "$search_string" "$limit";
 }
 
 task_list_records_in_table () {
@@ -31,8 +30,7 @@ task_list_records_in_table () {
 		exit 1;
 	fi
 
-	local payload=$(get "$(from_table $tablename)" "$tablename" "$select" "" "$limit");
-	output "$payload";
+	get "$(from_table $tablename)" "$tablename" "$select" "" "$limit";
 }
 
 
@@ -41,8 +39,7 @@ task_get_record_by_id () {
 	local id="$(get_argument 'id')";
 	local tablename="$(filter_table $(get_argument 'from'))";
 
-	local payload=$(get "$(record_by_id $id)" "$tablename" "$select" "" "");
-	output "$payload";
+	get "$(record_by_id $id)" "$tablename" "$select" "" "";
 }
 
 
@@ -57,8 +54,7 @@ task_add_record () {
 		exit 1;
 	fi
 
-	local payload=$(add "$tablename" "$title" "$value");
-	output "$payload";
+	add "$tablename" "$title" "$value";
 }
 
 
@@ -79,13 +75,6 @@ task_update_record () {
 	fi
 
 	update "$id" "$tablename";
-
-	if [[ $? == 0 ]]; then
-		output "OK";
-	else
-		output "Unknown error while updating record.";
-		exit 1;
-	fi
 }
 
 
@@ -119,44 +108,42 @@ task_create_table () {
 	local tablename="$(filter_table $(get_argument 'table'))";
 	local columns="$(get_argument 'columns')";
 
-	local payload=$(create_table "$tablename" "$columns");
-	output "$payload";
+	create_table "$tablename" "$columns";
 }
 
 task_drop_table () {
 	local tablename="$(filter_table $(get_argument 'table'))";
 
-	local payload=$(drop_table "$tablename");
-	output "$payload";
+	drop_table "$tablename";
 }
 
 task_list_tables () {
 
 	# convert list of strings to json array
-	local payload=$(list_tables | jq --slurp --raw-input 'split("\n")[:-1]');
-	output "$payload";
+	list_tables | jq --slurp --raw-input 'split("\n")[:-1]';
 }
 
 task_rename_table () {
 	local tablename="$(filter_table $(get_argument 'table'))";
 	local new_tablename="$(filter_table $(get_argument 'to'))";
 
-	local payload=$(rename_table "$tablename" "$new_tablename");
-	output "$payload";
+	rename_table "$tablename" "$new_tablename";
 }
 
 task_list_databases () {
 
 	# convert list of strings to json array
-	local payload=$(ls "$db_dir" | jq --slurp --raw-input 'split("\n")[:-1]');
-	output "$payload";
+	ls "$db_dir" | jq --slurp --raw-input 'split("\n")[:-1]';
 }
 
 task_info_table () {
 	local tablename="$(filter_table $(get_argument 'describe'))";
 
 	local payload=$(get_columns "$tablename");
+	local returncode=$?;
+
 	output "$payload";
+	exit $returncode;
 }
 
 task_add_column () {
@@ -164,8 +151,7 @@ task_add_column () {
 	local name=$(get_argument 'addcolumn' | awk '{print $1}');
 	local type=$(get_argument 'addcolumn' | awk '{print $2}');
 
-	local payload=$(add_column "$tablename" "$name" "$type");
-	output "$payload";
+	add_column "$tablename" "$name" "$type";
 }
 
 task_persist_database () {
@@ -185,21 +171,18 @@ task_persist_database () {
 task_create_database () {
 	local database_name="$(get_argument "database")";
 
-	local payload=$(create_database "$database_name");
-	output "$payload";
+	create_database "$database_name";
 }
 
 task_drop_database () {
 	local database_name="$(get_argument "database")";
 
-	local payload=$(drop_database "$database_name");
-	output "$payload";
+	drop_database "$database_name";
 }
 
 task_rename_database () {
 	local databasename="$(get_argument 'database')";
 	local new_databasename="$(get_argument 'to')";
 
-	local payload=$(rename_database "$databasename" "$new_databasename");
-	output "$payload";
+	rename_database "$databasename" "$new_databasename";
 }
