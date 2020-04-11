@@ -15,3 +15,9 @@ b2baa440-b0d2-4973-9180-21117de27c16|o_o|Mocha cake|o_o|8|o_o|2|o_o|2|o_o|999
 --id|o_o|text
 --title|o_o|text
 --strong|o_o|int
+### tabletest
+15c0a959-4167-474b-b963-79f17a1f0713|o_o|Flattened oak tree|o_o|unflattened pine blob|o_o|9001
+--id|o_o|text
+--table|o_o|text
+--chair|o_o|text
+--awesome|o_o|int
