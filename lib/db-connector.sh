@@ -478,7 +478,7 @@ create_table () {
 			fi
 
 			if ! valid_column_type "$type"; then
-				>&2 echo "Warning: column \"$name\" has invalid data type \"$type\". Skipping..";
+				>&2 echo "Warning: invalid data type on column \"$name\". Can only be \"text\", \"int\" or \"bool\". Skipping..";
 				continue;
 			fi
 
@@ -548,7 +548,7 @@ add_column () {
 		echo "Column name \"$name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _.";
 		exit 1;
 	elif ! valid_column_type "$type"; then
-		echo "Error: column type \"$type\" is not valid.";
+		echo "Error: column type \"$type\" is not valid. Can only be \"text\", \"int\" or \"bool\".";
 		exit 1;
 	fi
 
@@ -581,7 +581,7 @@ column_exists () {
 valid_column_type () {
 	local type="$1";
 
-	if [[ "$type" == "text" || "$type" == "int" ]]; then
+	if [[ "$type" == "text" || "$type" == "int" || "$type" == "bool" ]]; then
 		true;
 	else
 		false;
@@ -716,7 +716,7 @@ valid_column_name () {
 	fi
 }
 
-# our columns support 'int' and 'text'
+# our columns support 'int', 'text' and 'bool'
 # so lets sanitize the column values against those types
 sanitize_column_value () {
 	local column="$1";
