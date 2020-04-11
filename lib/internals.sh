@@ -234,6 +234,22 @@ append () {
 	fi
 }
 
+# cast to int, with an option to return default value
+int () {
+	attempt_to_cast=$(echo $1 | sed 's/^\([0-9]\{1,\}\).*/\1/g' | sed 's/\.$//g');
+	default_value=$2;
+
+	if [[ "$attempt_to_cast" =~ ^[0-9]+$ ]]; then
+		echo $attempt_to_cast;
+	else
+		if [[ "$default_value" =~ ^[0-9]+$ ]]; then
+			echo $default_value;
+		else
+			echo 0;
+		fi
+	fi
+}
+
 is_int () {
 	if [[ "$1" =~ ^[0-9]+$ ]]; then
 		true;

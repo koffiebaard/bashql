@@ -308,7 +308,7 @@ add () {
 			exit 1;
 		fi
 	else
-		echo "Error: database \"$table_name\" could not be found.";
+		echo "Error: table \"$table_name\" could not be found.";
 		exit 1;
 	fi
 }
@@ -320,43 +320,45 @@ build_new_record () {
 	local fetch_from_old_record="$3";
 
 	args=$(echo "$argument_list" | egrep -v 'update|insert|into');
-	local fields=$(get_columns "$tablename" "name" | jq -r '.[]');
+	local columns=$(get_columns "$tablename");
 
 	local new_record="$id";
 
-	# iterate through metadata fields so we add data in the right order
-	while read field; do
+	# iterate through columns so we add the proper data
+	for column in $(echo "${columns}" | jq -r '.[] | @base64'); do
+		local column=$(echo "${column}" | base64 --decode);
+
+		local column_name=$(🐐 "$column" "name");
+		local column_type=$(🐐 "$column" "type");
 
 		# skip ID, since we already added it (and create doesn't have it as an argument)
-		if [[ "$field" == "id" ]]; then
+		if [[ "$column_name" == "id" ]]; then
 			continue;
 		fi
 
+		# lets determine the value this column will get
+		local value="";
+
 		# is the value for this field supplied as an argument?
-		if [[ $(echo "$args" | egrep "^$field\$" | wc -l) == 1 ]]; then
-			local value="$(get_argument "$field")";
-			new_record=$(append "$new_record" "$value" "$delim");
+		if [[ $(echo "$args" | egrep "^$column_name\$" | wc -l) == 1 ]]; then
+			value="$(get_argument "$column_name")";
 
-		# otherwise we add a default value
-		else
+		# or shall we fetch the value from the previous record in the db?
+		elif [[ "$fetch_from_old_record" == 1 ]]; then
+			value=$(get "$(record_by_id $id)" "$tablename" "$column_name" "" "" | jq -r ".[].$column_name");
 
-			# shall we fetch the value from the previous record in the db?
-			if [[ "$fetch_from_old_record" == 1 ]]; then
-				local value=$(get "$(record_by_id $id)" "$tablename" "$field" "" "" | jq -r ".[].$field");
-
-				# jq has null implemented, but shell of course doesn't.
-				if [[ "$value" == "null" ]]; then
-					value="";
-				fi
-
-				new_record=$(append "$new_record" "$value" "$delim");
-
-			# or just add an empty spot for this field
-			else
-				new_record=$(append "$new_record" "" "$delim");
+			# jq has null implemented, but shell of course doesn't.
+			if [[ "$value" == "null" ]]; then
+				value="";
 			fi
 		fi
-	done<<<"$fields"
+
+		# for better or worse, we have a value
+		value=$(sanitize_column_value "$column_name" "$column_type" "$value");
+
+		# ok, at least now it's not worse
+		new_record=$(append "$new_record" "$value" "$delim");
+	done
 
 	# yay a new record!
 	echo "$new_record";
@@ -713,3 +715,38 @@ valid_column_name () {
 		true;
 	fi
 }
+
+# our columns support 'int' and 'text'
+# so lets sanitize the column values against those types
+sanitize_column_value () {
+	local column="$1";
+	local type="$2";
+	local value="$3";
+
+	if [[ "$type" == "int" ]]; then
+
+		# simply cast to int
+		echo $(int "$value");
+
+		# but warn those cunts if they're being cunty
+		if ! is_int "$value"; then
+			>&2 echo "Warning: Column \"$column\" needs to be an integer, not whatever the shit \"$value\" is.";
+		fi
+
+	elif [[ "$type" == "bool" ]]; then
+
+		# good bool.
+		if [[ "$value" == "0" || "$value" == "1" ]]; then
+			echo "$value";
+		# bool shit. fucking cunts can't do anything right.
+		else
+			>&2 echo "Warning: Column \"$column\" needs to be a bool, 0 or 1. Please don't send \"$value\" again.";
+		fi
+
+	elif [[ "$type" == "text" ]]; then
+
+		# text accepts all. Let's do fuck-all.
+		echo "$value";
+	fi
+}
+
