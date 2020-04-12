@@ -96,4 +96,57 @@ validate "update to col_int still there" "$(./i.sh --select=col_int --from=test 
 validate "update col_bool" "$(./i.sh --update=test --id="$insert_id" --col_bool=0)" "OK"
 validate "update to col_bool still there" "$(./i.sh --select=col_bool --from=test --id="$insert_id" --filter=col_bool)" "0"
 
+#validate "update col_bool to non-bool" $(./i.sh --update=test --id="$insert_id" --col_bool="CAKE" &> /dev/null || echo "naw") "naw"
+#validate "col_bool is unchanged" "$(./i.sh --select=col_bool --from=test --id="$insert_id" --filter=col_bool)" "0"
+
+printf "\n";
+
+validate "new column: add column \"cake\" type \"text\"" "$(./i.sh --alter --table=test --addcolumn="cake text")" "OK"
+validate "new column: check value (empty)" "$(./i.sh --select=cake --from=test --id="$insert_id" --filter=cake)" "null"
+validate "new column: update value" "$(./i.sh --update=test --id="$insert_id" --cake=delicious)" "OK"
+validate "new column: check value (delicious)" "$(./i.sh --select=cake --from=test --id="$insert_id" --filter=cake)" "delicious"
+
+printf "\n";
+
+validate "new column: add column \"power_level\" type \"int\"" "$(./i.sh --alter --table=test --addcolumn="power_level int")" "OK"
+validate "new column: update value" "$(./i.sh --update=test --id="$insert_id" --power_level=9001)" "OK"
+validate "new column: check value (9001)" "$(./i.sh --select=power_level --from=test --id="$insert_id" --filter=power_level)" "9001"
+
+printf "\n";
+
+validate "new column: add column \"awesome\" type \"bool\"" "$(./i.sh --alter --table=test --addcolumn="awesome bool")" "OK"
+validate "new column: update value" "$(./i.sh --update=test --id="$insert_id" --awesome=1)" "OK"
+validate "new column: check value (1)" "$(./i.sh --select=awesome --from=test --id="$insert_id" --filter=awesome)" "1"
+
+
+
+
+
+# add new tests above this line
+
+printf "\n";
+
+validate "rename table" "$(./i.sh --rename --table=test --to=supertest)" "OK"
+validate "rename table: select from old name" "$(./i.sh --select=cake --from=test --id="$insert_id" &> /dev/null || echo "naw")" "naw"
+validate "rename table: select from new name" "$(./i.sh --select=cake --from=supertest --id="$insert_id" --filter=cake)" "delicious"
+
+printf "\n";
+
+validate "rename database" "$(./i.sh --rename --database=automatic_test --to=automatic_titty)" "OK"
+validate "rename database: select from old name" "$(./i.sh --select=cake --from=supertest --id="$insert_id" &> /dev/null || echo "naw")" "naw"
+validate "rename database: select from new name" "$(./i.sh --select=cake --from=automatic_titty.supertest --id="$insert_id" --filter=cake)" "delicious"
+validate "rename database: --use" "$(./i.sh --use=automatic_titty)" "OK"
+validate "rename database: select" "$(./i.sh --select=cake --from=automatic_titty.supertest --id="$insert_id" --filter=cake)" "delicious"
+
+printf "\n";
+
+validate "delete record" "$(./i.sh --delete --from=supertest --id="$insert_id")" "OK"
+validate "delete record: select" "$(./i.sh --select=cake --from=supertest --id="$insert_id")" "[]"
+
+validate "drop table" "$(./i.sh --drop --table=supertest)" "OK"
+validate "drop table: select" "$(./i.sh --select=cake --from=supertest &> /dev/null || echo "naw")" "naw"
+
+validate "drop database" "$(./i.sh --drop --database=automatic_titty)" "OK"
+validate "drop database: show tables" "$(./i.sh --show --tables &> /dev/null || echo "naw")" "naw"
+
 printf "\n";

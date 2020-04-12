@@ -39,6 +39,12 @@ task_get_record_by_id () {
 	local id="$(get_argument 'id')";
 	local tablename="$(filter_table $(get_argument 'from'))";
 
+	# validate tablename
+	if ! table_exists "$tablename"; then
+		echo "Error: Table \"$tablename\" does not exist.";
+		exit 1;
+	fi
+
 	get "$(record_by_id $id)" "$tablename" "$select" "" "";
 }
 
@@ -80,7 +86,7 @@ task_update_record () {
 
 task_delete_record () {
 	local id="$(get_argument 'id')";
-	local table="$(filter_table $(get_argument 'from'))";
+	local tablename="$(filter_table $(get_argument 'from'))";
 
 
 	if ! id_in_db "$id"; then
