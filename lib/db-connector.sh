@@ -257,7 +257,11 @@ get () {
 		done<<<"$list_of_values"
 
 		local record_object=$(jq "${jq_args[@]}" "$jq_query" <<<{});
-		record_array=$(append_object_to_array "$record_array" "$record_object");
+
+		# Don't add empty objects (in case only faulty column names were provided)
+		if [[ "$record_object" != "{}" ]]; then
+			record_array=$(append_object_to_array "$record_array" "$record_object");
+		fi
 
 		if [[ "$limit" != "" && $record_count == $limit ]]; then
 			break;
@@ -268,22 +272,6 @@ get () {
 	done<<<"$records"
 
 	output "$record_array";
-}
-
-
-get_field_from_record () {
-	record="$1";
-	field_id="$2";
-
-	echo "$record" | sed "s/^\([0-9a-z\-]*\)|o_o|\([0-9a-zA-Z _-]*\)[|o_o|]*\(.*\)[|o_o|]*\(.*\)[|o_o|]*\(.*\)/\\$field_id/g"
-}
-
-
-field_name_to_id () {
-	field_name="$1";
-	field_record=$(from_table "metadata" | grep "$field_name");
-
-	get_field_from_record "$field_record" 1
 }
 
 
@@ -568,6 +556,133 @@ add_column () {
 	output "OK";
 }
 
+rename_column () {
+	local tablename="$1";
+	local name="$2";
+	local new_name="$3";
+	local new_type="$4";
+
+	#local compiled_column="--$name$delim$type";
+
+	if ! table_exists "$tablename"; then
+		fatal "Table \"$tablename\" doesn't exist.";
+		exit 1;
+	elif ! column_exists "$tablename" "$name"; then
+		fatal "Column \"$name\" doesn't exist.";
+		exit 1;
+	elif column_exists "$tablename" "$new_name"; then
+		fatal "Column \"$new_name\" already exists. Please choose another name.";
+		exit 1;
+	elif ! valid_column_name "$new_name"; then
+		fatal "Column name \"$new_name\" is not valid. It must contain at least 3 characters and can only contain a-z A-Z 0-9 _.";
+		exit 1;
+	elif [[ $new_type != "" ]] && ! valid_column_type "$new_type"; then
+		fatal "column type \"$new_type\" is not valid. Can only be \"text\", \"int\" or \"bool\".";
+		exit 1;
+	fi
+
+	# get line count for last column
+	local found_column_record=$(cat -n "$db_file" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $tablename/,/###/p" | \
+		grep "^[[:space:]]*[0-9]*[[:space:]]*--$name|");
+
+	# did we find the column?
+	if [[ "$found_column_record" != "" && $(echo "$found_column_record" | wc -l) == 1 ]]; then
+
+		local column=$(echo "$found_column_record" | awk '{print $2}');
+		local column_line_number=$(echo "$found_column_record" | awk '{print $1}');
+
+		#echo "Table \"$tablename\", renaming column \"$name\" to \"$new_name\"";
+		#echo "Found column on line $column_line_number";
+
+		sed -i "${column_line_number}s/--[a-zA-Z0-9_]*|/--$new_name|/" "$db_file";
+
+		if column_exists "$tablename" "$new_name"; then
+			output "OK";
+		else
+			fatal "Column could not be renamed. Unknown error. #101";
+		fi
+	else
+		fatal "Column could not be renamed. Unknown error. #100";
+		exit 1;
+	fi
+}
+
+drop_column () {
+	local table_name="$1";
+	local column_name="$2";
+
+	if ! table_exists "$table_name"; then
+		fatal "Table \"$table_name\" doesn't exist.";
+		exit 1;
+	elif ! column_exists "$table_name" "$column_name"; then
+		fatal "Column \"$column_name\" doesn't exist.";
+		exit 1;
+	fi
+
+	# get all columns, numbered
+	local columns=$(cat "$db_file" | \
+		sed -n "/^### $table_name/,/^###/p" | \
+		grep "^--" | grep -n "");
+
+	# get the number for our column
+	local column_number=$(echo "$columns" | grep "\-\-$column_name|" | awk "BEGIN{FS=\":\"} {print \$1}");
+
+	local records=$(cat "$db_file" | sed -n "/### $table_name\$/,/###/p" | grep -v '^--' | grep -v "^###");
+
+	# replace value of the to-be-dropped column to a fixed value
+	local column_droppings=$(echo "$records" | awk "BEGIN{FS=\"\\\\|o_o\\\\|\"; OFS=\"|o_o|\"} {\$$column_number=\"COLUMN_DROPPINGS\"; print \$0}");
+
+	# remove that fixed value including the column (in between columns)
+	column_droppings=$(echo "$column_droppings" | sed 's/|o_o|COLUMN_DROPPINGS|o_o|/|o_o|/g');
+
+	# or at the end of the columns
+	column_droppings=$(echo "$column_droppings" | sed 's/|o_o|COLUMN_DROPPINGS$/|o_o|/g');
+
+	# fetch line numbers of all records in the table
+	records_line_number_start=$(cat -n "$db_file" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
+		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
+		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*--" | \
+		awk '{print $1}' | \
+		head -n1);
+
+	records_line_number_end=$(cat -n "$db_file" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
+		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
+		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*--" | \
+		awk '{print $1}' | \
+		tail -n1);
+
+	table_line_number=$(grep -n "^### $table_name\$" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+
+	column_line_number=$(grep -n "^--$column_name|" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+
+	#@tag_droppings
+	if is_int "$records_line_number_start" && is_int "$records_line_number_end" && is_int "$table_line_number" && is_int "$column_line_number"; then
+
+		# delete the column
+		delete_line_by_number "$column_line_number"
+
+		# remove old records
+		delete_lines_by_number_range "$records_line_number_start" "$records_line_number_end"
+
+		# commit updated records (translate actual newlines to \n, remove last \n, and commit to db)
+		column_droppings=$(echo "$column_droppings" | awk -v ORS='\\n' '1');
+		column_droppings="${column_droppings::${#column_droppings}-2}";
+
+		commit_to_db "$column_droppings" "$table_line_number"
+
+		if ! column_exists "$table_name" "$column_name"; then
+			output "OK";
+		else
+			fatal "Column could not be dropped. Unknown error. #201";
+		fi
+	else
+		fatal "Column could not be dropped. Unknown error. #200";
+		exit 1;
+	fi
+}
 
 column_exists () {
 	local tablename="$1";
@@ -605,6 +720,7 @@ rename_table () {
 		exit 1;
 	fi
 
+	#@tag_renametable
 	sed -i "s/^### $tablename$/### $new_tablename/g" "$db_file";
 
 	output "OK";

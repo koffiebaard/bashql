@@ -16,6 +16,7 @@ if [[ $(database) == "" ]]; then
 
 	# these routes (copied from below) don't need a database connection
 	if  [[ $(get_argument "use") != "" ]] || \
+	    [[ $(get_argument "help") == 1 ]] || \
 		[[ $(get_argument "create") != "" && $(get_argument "database") != "" ]] || \
 		[[ $(get_argument "drop") != "" && $(get_argument "database") != "" ]] || \
 		[[ $(get_argument "show") == 1 && $(get_argument "databases") == 1 ]] || \
@@ -63,13 +64,19 @@ elif [[ $(get_argument "update") != "" && $(get_argument "id") != "" ]]; then
 elif [[ $(get_argument "create") != "" && $(get_argument "table") != "" ]]; then
 	task_create_table
 
-elif [[ $(get_argument "drop") != "" && $(get_argument "table") != "" ]]; then
+elif [[ $(get_argument "alter") == "" && $(get_argument "drop") != "" && $(get_argument "table") != "" ]]; then
 	task_drop_table
 
 elif [[ $(get_argument "alter") != "" && $(get_argument "table") != "" && $(get_argument "addcolumn") != "" ]]; then
 	task_add_column
 
-elif [[ $(get_argument "rename") != "" && $(get_argument "table") != "" && $(get_argument "to") != "" ]]; then
+elif [[ $(get_argument "alter") == 1 && $(get_argument "table") != "" && $(get_argument "rename") != "" && $(get_argument "to") != "" ]]; then
+	task_rename_column
+
+elif [[ $(get_argument "alter") == 1 && $(get_argument "table") != "" && $(get_argument "drop") != "" ]]; then
+	task_drop_column
+
+elif [[ $(get_argument "alter") == "" && $(get_argument "rename") != "" && $(get_argument "table") != "" && $(get_argument "to") != "" ]]; then
 	task_rename_table
 
 elif [[ $(get_argument "create") != "" && $(get_argument "database") != "" ]]; then
@@ -78,8 +85,11 @@ elif [[ $(get_argument "create") != "" && $(get_argument "database") != "" ]]; t
 elif [[ $(get_argument "drop") != "" && $(get_argument "database") != "" ]]; then
 	task_drop_database
 
-elif [[ $(get_argument "rename") != "" && $(get_argument "database") != "" && $(get_argument "to") != "" ]]; then
+elif [[ $(get_argument "alter") == "" && $(get_argument "rename") != "" && $(get_argument "database") != "" && $(get_argument "to") != "" ]]; then
 	task_rename_database
+
+elif [[ $(get_argument 'dino') == 1 ]]; then
+	task_dino
 
 elif [[ $(get_argument 'help') == 1 ]]; then
 
@@ -114,6 +124,9 @@ elif [[ $(get_argument 'help') == 1 ]]; then
 	echo "	$(tput setaf 7)Add column$(tput sgr0)"
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--alter $(tput sgr0)$(tput setaf 6)--table=$(tput sgr0)table $(tput setaf 6)--addcolumn=$(tput sgr0)'name type'"
 	echo ""
+	echo "	$(tput setaf 7)Rename column$(tput sgr0)"
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--alter $(tput sgr0)$(tput setaf 6)--table=$(tput sgr0)table $(tput setaf 6)--rename=$(tput sgr0)name $(tput setaf 6)--to=$(tput sgr0)new_name"
+	echo ""
 	echo "$(tput setaf 7)Databases$(tput sgr0)"
 	echo "	$(tput setaf 7)Create database$(tput sgr0)"
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--create$(tput sgr0) $(tput setaf 6)--database=$(tput sgr0)database"
@@ -133,8 +146,9 @@ elif [[ $(get_argument 'help') == 1 ]]; then
 	echo ""
 	echo "	$(tput setaf 7)Show databases$(tput sgr0)"
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--show --databases$(tput sgr0)"
+	echo "";
 else
 
-	echo "Sorry, i do not recognize your command."
+	echo "Sorry, i do not recognize your command. Try --help"
 
 fi

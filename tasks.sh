@@ -160,6 +160,22 @@ task_add_column () {
 	add_column "$tablename" "$name" "$type";
 }
 
+task_rename_column () {
+	local tablename="$(filter_table $(get_argument 'table'))";
+	local name=$(get_argument 'rename');
+	local new_name=$(get_argument 'to' | awk '{print $1}');
+	local new_type=$(get_argument 'to' | awk '{print $2}');
+
+	rename_column "$tablename" "$name" "$new_name" "$new_type"
+}
+
+task_drop_column () {
+	local tablename="$(filter_table $(get_argument 'table'))";
+	local name=$(get_argument 'drop');
+
+	drop_column "$tablename" "$name";
+}
+
 task_persist_database () {
 	local db="$(get_argument "use")";
 
@@ -191,4 +207,48 @@ task_rename_database () {
 	local new_databasename="$(get_argument 'to')";
 
 	rename_database "$databasename" "$new_databasename";
+}
+
+task_dino () {
+
+	nl=" ";
+	for number in {1..12}; do
+
+		# jump up on even, down on odd
+		if [[ $number == 12 ]]; then
+			echo -e "                                           ";
+			echo -e "        $nl                __              ";
+			echo -e "        $nl               / _) -- rawr!";
+			echo -e "  |     $nl        .-^^^-/ /";
+			echo -e " \|     $nl     __/       /";
+			echo -e "  |/    $nl    <__.|_|-|_|";
+			echo -e "--|----^^-------------------^^----^^^----^^";
+		elif (( $number % 2 )); then
+			nl+=" ";
+
+			echo -e "                                           ";
+			echo -e "        $nl                __              ";
+			echo -e "        $nl               / _)             ";
+			echo -e "  |     $nl        .-^^^-/ /";
+			echo -e " \|     $nl     __/       /";
+			echo -e "  |/    $nl    <__.|_|-|_|";
+			echo -e "--|----^^-------------------^^----^^^----^^";
+		else
+			nl+=" ";
+
+			echo -e "        $nl                __              ";
+			echo -e "        $nl               / _)             ";
+			echo -e "        $nl        .-^^^-/ /               ";
+			echo -e "  |     $nl     __/       /                ";
+			echo -e " \|     $nl    <__.|_|-|_|";
+			echo -e "  |/                                       ";
+			echo -e "--|----^^-------------------^^----^^^----^^";
+		fi
+
+		sleep 0.2;
+
+		echo -en "\e[7A";
+	done
+
+	printf "\n\n\n\n\n\n\n\n";
 }

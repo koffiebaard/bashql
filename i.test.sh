@@ -16,6 +16,11 @@ validate () {
 
 }
 
+# backup the session file, since we'll mess it up in the tests
+if [[ -f "/tmp/ish_session_db" ]]; then
+	mv /tmp/ish_session_db /tmp/ish_session_db.test.backup
+fi
+
 # Dropping test database just in case we failed to remove it previously
 ./i.sh --drop --database=automatic_test &> /dev/null
 
@@ -102,7 +107,7 @@ validate "update to col_bool still there" "$(./i.sh --select=col_bool --from=tes
 printf "\n";
 
 validate "new column: add column \"cake\" type \"text\"" "$(./i.sh --alter --table=test --addcolumn="cake text")" "OK"
-validate "new column: check value (empty)" "$(./i.sh --select=cake --from=test --id="$insert_id" --filter=cake)" "null"
+validate "new column: check value (empty)" "$(./i.sh --select=cake --from=test --id="$insert_id" --filter=cake)" ""
 validate "new column: update value" "$(./i.sh --update=test --id="$insert_id" --cake=delicious)" "OK"
 validate "new column: check value (delicious)" "$(./i.sh --select=cake --from=test --id="$insert_id" --filter=cake)" "delicious"
 
@@ -123,6 +128,15 @@ validate "new column: check value (1)" "$(./i.sh --select=awesome --from=test --
 
 
 # add new tests above this line
+
+printf "\n";
+
+validate "rename column" "$(./i.sh --alter --table=test --rename=awesome --to=super_awesome)" "OK"
+validate "rename column: select old name" "$(./i.sh --select=awesome --from=test --id="$insert_id")" "[]"
+validate "rename column: select new name" "$(./i.sh --select=super_awesome --from=test --id="$insert_id" --filter=super_awesome)" "1"
+validate "rename column: incorrect table" "$(./i.sh --alter --table=testzz --rename=super_awesome --to=turbo_awesome &> /dev/null || echo "naw")" "naw"
+validate "rename column: incorrect old column name" "$(./i.sh --alter --table=test --rename=super_4w3s0m3 --to=turbo_awesome &> /dev/null || echo "naw")" "naw"
+validate "rename column: incorrect new column name" "$(./i.sh --alter --table=test --rename=super_awesome --to='turbo@&*awesome' &> /dev/null || echo "naw")" "naw"
 
 printf "\n";
 
@@ -150,3 +164,11 @@ validate "drop database" "$(./i.sh --drop --database=automatic_titty)" "OK"
 validate "drop database: show tables" "$(./i.sh --show --tables &> /dev/null || echo "naw")" "naw"
 
 printf "\n";
+
+
+
+# reset the session file
+if [[ -f "/tmp/ish_session_db.test.backup" ]]; then
+	mv /tmp/ish_session_db.test.backup /tmp/ish_session_db
+fi
+
