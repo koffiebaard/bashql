@@ -1,9 +1,5 @@
 #!/bin/bash
 
-curdir="$(dirname "$0")";
-
-source "$curdir/lib/db-connector.sh";
-
 task_search_in_table () {
 	local select="$(get_argument 'select')";
 	local tablename="$(filter_table $(get_argument 'from'))";

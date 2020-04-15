@@ -1,22 +1,53 @@
-![i.sh](docs/logo.png)
+![BashQL](docs/logo.png)
 
-Database engine completely built in bash.
+Database completely built in bash.
 
-Note: It's a work in progress, so please don't use it yet. The storage format can still change.
+BashQL (Bash Query Language) is a database management system (dbms) and database engine rolled into one. Very quick setup and transparent: databases are set up locally in the BashQL install directory. Easy to back up and ship elsewhere.
+
+Note: It's a work in progress, keep in mind that the storage format can still change.
+The nightly build is dark and full of terrors.
 
 
 ## Features
-	* SQL-like syntax on the commandline
-	* Runs completely on bash. Relies on grep, awk, etc.
-	* Just one dependency.
-	* Create tables
-	* Insert / update records
-	* Search, fetch by ID, list all records in table
+	* SQL-like syntax on the commandline, like:
+		* --show --databases
+		* --show --tables
+		* --describe=<table_name>
+		* --select=* --from=<table_name> --id=<id>
+	* Runs completely on bash
+	* Output can be JSON or a table format
+	* Only three dependencies: grep, awk and jq.
+	* Create/update/drop databases and tables
+	* Insert / update / delete records
+	* Supports search and fetch by ID
 
 
 ## Dependencies
 
+	* awk
+	* grep
 	* jq (for json support)
+
+
+## Get started
+
+```bash
+
+# Pull repo
+git pull git@github.com:koffiebaard/ish.git
+
+# install (== put symlinks in ~/.local/bin, check dependencies)
+./install.sh
+
+# source your profile for autocomplete to work
+source ~/.bash_profile
+
+# Confirm everything works
+bql --test
+
+# Check again, just to be sure
+bql --rawr
+```
 
 
 ## Examples
@@ -24,27 +55,27 @@ Note: It's a work in progress, so please don't use it yet. The storage format ca
 ```bash
 
 # Create database
-$ i.sh --create --database=test
+$ bql --create --database=test
 OK
 
 # Select database
-$ i.sh --use=test
+$ bql --use=test
 OK
 
 # Create table
-$ i.sh --create --table=tabletest --columns='table text, chair text, awesome int'
+$ bql --create --table=tabletest --columns='table text, chair text, awesome int'
 OK
 
 # Show table info (incorrect table name)
-$ i.sh --describe=tabletesTTT
+$ bql --describe=tabletesTTT
 Error: Table "tabletesTTT" does not exist.
 
 # Show table info (incorrect database name)
-$ i.sh --describe=cake.tabletest
+$ bql --describe=cake.tabletest
 Fatal: Database "cake" doesn't exist.
 
 # Show table info (default is json)
-$ i.sh --describe=tabletest
+$ bql --describe=tabletest
 [
   {
     "name": "id",
@@ -65,7 +96,7 @@ $ i.sh --describe=tabletest
 ]
 
 # Show table info (in table format)
-$ i.sh --describe=tabletest --tabular
+$ bql --describe=tabletest --tabular
 
 | name         | type
 =======================
@@ -75,11 +106,11 @@ $ i.sh --describe=tabletest --tabular
 | awesome      | int
 
 # Insert record into table
-$ i.sh --insert --into=tabletest --table="Flattened oak tree" --chair="Unflattened pine blob" --awesome=9001
+$ bql --insert --into=tabletest --table="Flattened oak tree" --chair="Unflattened pine blob" --awesome=9001
 15c0a959-4167-474b-b963-79f17a1f0713
 
 # select from table, in table format
-$ i.sh --select=* --from=tabletest --tabular
+$ bql --select=* --from=tabletest --tabular
 
 | awesome      | chair                      | id                                        | table
 ==========================================================================================================
@@ -87,50 +118,12 @@ $ i.sh --select=* --from=tabletest --tabular
 
 ```
 
-## Reference docs (ish)
-```bash
-Records
-	Read
-		i.sh --select=id,title --from=table
-		i.sh --select=id,title --from=table
-		i.sh --select=title --from=table --id=id
-		i.sh --select=* --from=table --find="search string"
 
-	Create
-		i.sh --insert --into=table --title=title --content=value
+## Contributing
 
-	Update
-		i.sh --update=table --id=id --title="new title"
+Feel free to contribute! Ping me or send a pull request and let's go.
 
-	Delete
-		i.sh --delete --from=table --id=id
 
-Tables
-	Describe table
-		i.sh --describe=table
+## License
 
-	Create table
-		i.sh --create --table=table
-
-	Drop table
-		i.sh --drop --table=table
-
-	Add column
-		i.sh --alter --table=table --addcolumn='name type'
-
-Databases
-	Select database
-		i.sh --use=database
-
-	Database in tablename
-		i.sh --select=* --from=database.table
-
-Structure
-	Show tables
-		i.sh --show --tables
-
-	Show databases
-		i.sh --show --databases
-
-```
-
+BashQL is under the MIT license, but without me shipping the copyright text with the project. That's too much effort.

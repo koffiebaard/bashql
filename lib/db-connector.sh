@@ -1,6 +1,5 @@
 #!/bin/bash
 
-curdir="$(dirname "$0")";
 db_dir="$curdir/data";
 database_cached="";
 db_file="";

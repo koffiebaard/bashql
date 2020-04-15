@@ -1,6 +1,14 @@
 #!/bin/bash
 
-curdir="$(dirname "$0")";
+
+# resolve location of actual file, tracing a symlink if necessary
+source="${BASH_SOURCE[0]}";
+if [[ -L "$source" ]]; then
+	source="$(readlink "$source")"
+fi
+
+curdir="$( cd -P "$( dirname "$source" )" >/dev/null 2>&1 && pwd )"
+
 
 source "$curdir/lib/db-connector.sh";
 source "$curdir/tasks.sh";
@@ -17,6 +25,8 @@ if [[ $(database) == "" ]]; then
 	# these routes (copied from below) don't need a database connection
 	if  [[ $(get_argument "use") != "" ]] || \
 	    [[ $(get_argument "help") == 1 ]] || \
+	    [[ $(get_argument "test") == 1 ]] || \
+	    [[ $(get_argument "rawr") == 1 || $(get_argument "dino") == 1 ]] || \
 		[[ $(get_argument "create") != "" && $(get_argument "database") != "" ]] || \
 		[[ $(get_argument "drop") != "" && $(get_argument "database") != "" ]] || \
 		[[ $(get_argument "show") == 1 && $(get_argument "databases") == 1 ]] || \
@@ -88,8 +98,13 @@ elif [[ $(get_argument "drop") != "" && $(get_argument "database") != "" ]]; the
 elif [[ $(get_argument "alter") == "" && $(get_argument "rename") != "" && $(get_argument "database") != "" && $(get_argument "to") != "" ]]; then
 	task_rename_database
 
-elif [[ $(get_argument 'dino') == 1 ]]; then
+#@tag_rawr_dino
+elif [[ $(get_argument 'dino') == 1 || $(get_argument 'rawr') == 1 ]]; then
 	task_dino
+
+elif [[ $(get_argument 'test') == 1 ]]; then
+
+	$curdir/tests.sh
 
 elif [[ $(get_argument 'help') == 1 ]]; then
 
@@ -146,6 +161,13 @@ elif [[ $(get_argument 'help') == 1 ]]; then
 	echo ""
 	echo "	$(tput setaf 7)Show databases$(tput sgr0)"
 	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--show --databases$(tput sgr0)"
+	echo "";
+	echo "$(tput setaf 7)Etcetera$(tput sgr0)"
+	echo "	$(tput setaf 7)This very help section$(tput sgr0)"
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--help$(tput sgr0)"
+	echo "";
+	echo "	$(tput setaf 7)Rawr$(tput sgr0)"
+	echo "		$(tput setaf 6)i.sh$(tput sgr0) $(tput setaf 6)--rawr$(tput sgr0)"
 	echo "";
 else
 
