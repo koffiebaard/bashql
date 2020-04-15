@@ -625,19 +625,20 @@ drop_column () {
 		sed -n "/^### $table_name/,/^###/p" | \
 		grep "^--" | grep -n "");
 
-	# get the number for our column
+	# get the records and the number for our column (nth column)
 	local column_number=$(echo "$columns" | grep "\-\-$column_name|" | awk "BEGIN{FS=\":\"} {print \$1}");
-
 	local records=$(cat "$db_file" | sed -n "/### $table_name\$/,/###/p" | grep -v '^--' | grep -v "^###");
 
 	# replace value of the to-be-dropped column to a fixed value
 	local column_droppings=$(echo "$records" | awk "BEGIN{FS=\"\\\\|o_o\\\\|\"; OFS=\"|o_o|\"} {\$$column_number=\"COLUMN_DROPPINGS\"; print \$0}");
 
-	# remove that fixed value including the column (in between columns)
+	# remove that fixed value including the column (in between columns, or at the end)
 	column_droppings=$(echo "$column_droppings" | sed 's/|o_o|COLUMN_DROPPINGS|o_o|/|o_o|/g');
-
-	# or at the end of the columns
 	column_droppings=$(echo "$column_droppings" | sed 's/|o_o|COLUMN_DROPPINGS$/|o_o|/g');
+
+	# translate actual newlines to \n and remove last \n
+	column_droppings=$(echo "$column_droppings" | awk -v ORS='\\n' '1');
+	column_droppings="${column_droppings::${#column_droppings}-2}";
 
 	# fetch line numbers of all records in the table
 	records_line_number_start=$(cat -n "$db_file" | \
@@ -656,7 +657,7 @@ drop_column () {
 
 	table_line_number=$(grep -n "^### $table_name\$" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
-	column_line_number=$(grep -n "^--$column_name|" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	column_line_number=$(cat -n "$db_file" | sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | grep -n "^[[:space:]]*[0-9]*[[:space:]]*--$column_name|" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
 	#@tag_droppings
 	if is_int "$records_line_number_start" && is_int "$records_line_number_end" && is_int "$table_line_number" && is_int "$column_line_number"; then
@@ -667,10 +668,7 @@ drop_column () {
 		# remove old records
 		delete_lines_by_number_range "$records_line_number_start" "$records_line_number_end"
 
-		# commit updated records (translate actual newlines to \n, remove last \n, and commit to db)
-		column_droppings=$(echo "$column_droppings" | awk -v ORS='\\n' '1');
-		column_droppings="${column_droppings::${#column_droppings}-2}";
-
+		# commit new records to db
 		commit_to_db "$column_droppings" "$table_line_number"
 
 		if ! column_exists "$table_name" "$column_name"; then
@@ -679,6 +677,7 @@ drop_column () {
 			fatal "Column could not be dropped. Unknown error. #201";
 		fi
 	else
+		log_error "Column drop error #200: records_line_number_start: $records_line_number_start, records_line_number_end: $records_line_number_end, table_line_number: $table_line_number, column_line_number: $column_line_number. One of these is not a proper int.";
 		fatal "Column could not be dropped. Unknown error. #200";
 		exit 1;
 	fi
