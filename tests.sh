@@ -25,14 +25,14 @@ bql --drop --database=automatic_test &> /dev/null
 
 
 #@tag_generic_database
-printf "\n$(tput setaf 3)Generic database$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Generic database$(tput sgr0)\n"
 validate "Select non-existent database" $(bql --use=supertestcake &> /dev/null || echo "naw") "naw"
 validate "Select correct database" $(bql --use=example) "OK"
 validate "Drop non-existent database" $(bql --drop --database=thisonedefinitelydoesnotexist &> /dev/null || echo "naw") "naw"
 
 
 #@tag_generic_select
-printf "\n$(tput setaf 3)Generic selects$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Generic selects$(tput sgr0)\n"
 validate "select ID from example.coffee where title = double espresso" $(bql --select=id --from=coffee --find='double espresso' --limit=1 --filter=id) "3885aaa2-a8a3-4742-abc7-99673dfc85d2"
 validate "select title from example.coffee where title = double espresso" "$(bql --select=title --from=coffee --find='double espresso' --limit=1 --filter=title)" "Double Espresso"
 validate "show tables has cake & coffee" $(bql --show --tables | egrep 'cake|coffee' | wc -l) "2"
@@ -40,14 +40,14 @@ validate "set --limit to two" $(bql --select=title --from=cake --limit=2 --filte
 
 
 #@tag_setup_database
-printf "\n$(tput setaf 3)Set up database$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Set up database$(tput sgr0)\n"
 validate "Create database" $(bql --create --database=automatic_test) "OK"
 validate "Create same database again" $(bql --create --database=automatic_test &> /dev/null || echo "naw") "naw"
 validate "Select said database" $(bql --use=automatic_test) "OK"
 
 
 #@tag_create_table
-printf "\n$(tput setaf 3)Create table$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Create table$(tput sgr0)\n"
 validate "show tables (empty)" $(bql --show --tables) "[]"
 validate "create table" $(bql --create --table=test --columns='col_text text, col_int int, col_bool bool') "OK"
 validate "show tables (1 entry)" $(bql --show --tables | jq -r '.[]') "test"
@@ -56,7 +56,7 @@ validate "show tables (2 entries)" $(bql --show --tables | jq -r '.[]' | wc -l) 
 
 
 #@tag_describe_table
-printf "\n$(tput setaf 3)Describe table$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Describe table$(tput sgr0)\n"
 validate "describe table: Shows 4 fields" $(bql --describe=test | jq -r '.[].name' | egrep 'id|col_text|col_int|col_bool' | wc -l) "4"
 validate "describe table: id has type \"text\"" $(bql --describe=test | jq -r '.[] | select(.name == "id")' | jq -r '.type') "text"
 validate "describe table: col_text has type \"text\"" $(bql --describe=test | jq -r '.[] | select(.name == "col_text")' | jq -r '.type') "text"
@@ -68,7 +68,7 @@ insert_id=$(bql --insert --into=test --col_text="This is some random text yay." 
 returncode=$?;
 
 #@tag_insert_record
-printf "\n$(tput setaf 3)Insert record$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Insert record$(tput sgr0)\n"
 validate "inserted record: returns success" "$returncode" "0"
 validate "inserted record: has valid ID (length check)" $(echo "$insert_id" | wc -c) "37"
 validate "inserted record: has valid ID (regex check)" $(if [[ "$insert_id" =~ [a-f0-9-]* ]]; then echo "yay"; else echo "naww"; fi) "yay"
@@ -81,7 +81,7 @@ validate "inserted record #2: returns success" "$returncode" "0"
 
 
 #@tag_select_filter
-printf "\n$(tput setaf 3)Select and filter$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Select and filter$(tput sgr0)\n"
 validate "select=* --id=n with filter: proper value on id" $(bql --select=* --from=test --id="$insert_id" --filter=id) "$insert_id"
 validate "select=* --id=n with filter: proper value on col_text" "$(bql --select=* --from=test --id="$insert_id" --filter=col_text)" "This is some random text yay."
 validate "select=* --id=n with filter: proper value on col_int" $(bql --select=* --from=test --id="$insert_id" --filter=col_int) "9001"
@@ -103,7 +103,7 @@ validate "select=id: finds two fields" "$(bql --select=* --from=test | jq length
 
 
 #@tag_update_values
-printf "\n$(tput setaf 3)Update$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Update$(tput sgr0)\n"
 validate "update col_text" "$(bql --update=test --id="$insert_id" --col_text='a completely new arbitrary set of characters. whoop whoop.')" "OK"
 validate "update to col_text still there" "$(bql --select=col_text --from=test --id="$insert_id" --filter=col_text)" "a completely new arbitrary set of characters. whoop whoop."
 validate "update col_int" "$(bql --update=test --id="$insert_id" --col_int=9999)" "OK"
@@ -113,7 +113,7 @@ validate "update to col_bool still there" "$(bql --select=col_bool --from=test -
 
 
 #@tag_add_column
-printf "\n$(tput setaf 3)Add column$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Add column$(tput sgr0)\n"
 validate "new column: add column \"cake\" type \"text\"" "$(bql --alter --table=test --addcolumn="cake text")" "OK"
 validate "new column: check value (empty)" "$(bql --select=cake --from=test --id="$insert_id" --filter=cake)" ""
 validate "new column: update value" "$(bql --update=test --id="$insert_id" --cake=delicious)" "OK"
@@ -139,7 +139,7 @@ validate "new column: check value (1)" "$(bql --select=awesome --from=test --id=
 
 
 #@tag_rename_column
-printf "\n$(tput setaf 3)Rename column$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Rename column$(tput sgr0)\n"
 validate "rename column" "$(bql --alter --table=test --rename=awesome --to=super_awesome)" "OK"
 validate "rename column: select old name" "$(bql --select=awesome --from=test --id="$insert_id")" "[]"
 validate "rename column: select new name" "$(bql --select=super_awesome --from=test --id="$insert_id" --filter=super_awesome)" "1"
@@ -149,7 +149,7 @@ validate "rename column: incorrect new column name" "$(bql --alter --table=test 
 
 
 #@tag_drop_column
-printf "\n$(tput setaf 3)Drop column$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Drop column$(tput sgr0)\n"
 validate "drop column (last one)" "$(bql --alter --table=test --drop=super_awesome)" "OK"
 validate "drop column: select dropped column" "$(bql --select=awesome --from=test --id="$insert_id")" "[]"
 validate "drop column: check other values (cake)" "$(bql --select=cake --from=test --id="$insert_id" --filter=cake)" "delicious"
@@ -170,14 +170,14 @@ validate "drop another column: check other values (col_int)" "$(bql --select=col
 
 
 #@tag_rename_table
-printf "\n$(tput setaf 3)Rename table$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Rename table$(tput sgr0)\n"
 validate "rename table" "$(bql --rename --table=test --to=supertest)" "OK"
 validate "rename table: select from old name" "$(bql --select=cake --from=test --id="$insert_id" &> /dev/null || echo "naw")" "naw"
 validate "rename table: select from new name" "$(bql --select=cake --from=supertest --id="$insert_id" --filter=cake)" "delicious"
 
 
 #@tag_rename_database
-printf "\n$(tput setaf 3)Rename database$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Rename database$(tput sgr0)\n"
 validate "rename database" "$(bql --rename --database=automatic_test --to=automatic_titty)" "OK"
 validate "rename database: select from old name" "$(bql --select=cake --from=supertest --id="$insert_id" &> /dev/null || echo "naw")" "naw"
 validate "rename database: select from new name" "$(bql --select=cake --from=automatic_titty.supertest --id="$insert_id" --filter=cake)" "delicious"
@@ -186,19 +186,19 @@ validate "rename database: select" "$(bql --select=cake --from=automatic_titty.s
 
 
 #@tag_delete_record
-printf "\n$(tput setaf 3)Delete record$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Delete record$(tput sgr0)\n"
 validate "delete record" "$(bql --delete --from=supertest --id="$insert_id")" "OK"
 validate "delete record: select" "$(bql --select=cake --from=supertest --id="$insert_id")" "[]"
 
 
 #@tag_drop_table
-printf "\n$(tput setaf 3)Drop table$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Drop table$(tput sgr0)\n"
 validate "drop table" "$(bql --drop --table=supertest)" "OK"
 validate "drop table: select" "$(bql --select=cake --from=supertest &> /dev/null || echo "naw")" "naw"
 
 
 #@tag_drop_database
-printf "\n$(tput setaf 3)Drop database$(tput sgr0)\n"
+printf "\n$(tput setaf 5)Drop database$(tput sgr0)\n"
 validate "drop database" "$(bql --drop --database=automatic_titty)" "OK"
 validate "drop database: show tables" "$(bql --show --tables &> /dev/null || echo "naw")" "naw"
 

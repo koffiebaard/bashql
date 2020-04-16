@@ -250,6 +250,30 @@ get () {
 				jq_args+=( --arg "value$field" "$value" )
 
 				jq_query+=" | .[\$field$field]=\$value$field";
+
+				# add arguments and their values properly to jq
+		        #
+		        # some IDs are integers but start with zero, so we can't let jq have them as ints
+		        if [[ $value =~ ^[0-9\.]+$ && $value =~ ^0 ]] && ! [[ $value =~ ^0$ ]]; then
+		        	jq_query+=" | .[\$field$field]=\"$value\"";
+
+		        # ints, booleans, objects and arrays should be added directly to reflect their data type
+		        elif 	[[ \
+		        		# encapsulated in [ or { hints at json objects / arrays, so bypass jq args and insert directly
+		        		$value =~ ^\[.*\]$ || $value =~ ^\{.*\}$ \
+
+		        		# numbers need to be inserted directly as well, lest they be escaped and quoted (so they'd become strings)
+		        		|| $value =~ ^[0-9\.]+$ \
+
+		        		# booleans, same
+		        		|| $value == "true" || $value == "false" \
+		        	]]; then
+		        	jq_query+=" | .[\$field$field]=$value";
+
+		        # all else is encoded properly through jq args
+		        else
+		        	jq_query+=" | .[\$field$field]=\$value$field";
+		        fi
 			fi
 
 			key=$((key+1));
