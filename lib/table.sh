@@ -2,9 +2,9 @@
 
 # potentially remove the database from the table name
 filter_table () {
-	local table="$1";
+	local table_name="$1";
 
-	echo "$table" | sed 's/^\([a-zA-Z0-9_]*\)\.\(.*\)/\2/g';
+	echo "$table_name" | sed 's/^\([a-zA-Z0-9_]*\)\.\(.*\)/\2/g';
 }
 
 get_columns () {
@@ -17,7 +17,7 @@ get_columns () {
 	fi
 
 	local columns='[]';
-	local records=$(cat "$db_file" | sed -n "/### $table_name\$/,/###/p" | grep '^--');
+	local records=$(cat "$(tablefile "$table_name")" | sed -n "/### $table_name\$/,/###/p" | grep '^--');
 
 	while read record; do
 
@@ -46,15 +46,19 @@ get_columns () {
 
 list_tables () {
 
-	if [[ -f "$db_file" ]]; then
-		grep '^###' "$db_file" | sed 's/^### //g';
+	if stored_as_file; then
+		grep '^###' "$(tablefile "$table_name")" | sed 's/^### //g';
+	else
+		if [ ! -z "$(ls -A $(databasefile))" ]; then
+			find "$(databasefile)"/*  -printf "%f\n";
+		fi
 	fi
 }
 
 table_exists () {
-	tablename="$1";
+	local table_name="$1";
 
-	if [[ $(echo "$(list_tables)" | grep "^$tablename\$" | wc -l) -ge 1 ]]; then
+	if [[ $(echo "$(list_tables)" | grep "^$table_name\$" | wc -l) -ge 1 ]]; then
 		true;
 	else
 		false;
@@ -62,23 +66,29 @@ table_exists () {
 }
 
 create_table () {
-	tablename="$1";
-	columns="$2";
+	local table_name="$1";
+	local columns="$2";
 
-	if table_exists "$tablename"; then
-		fatal "Table \"$tablename\" already exists.";
+	if table_exists "$table_name"; then
+		fatal "Table \"$table_name\" already exists.";
 		exit 1
 	fi
 
-	if ! valid_table_name "$tablename"; then
+	if ! valid_table_name "$table_name"; then
 		exit 1;
 	fi
 
-	# add tablename to database
-	commit_to_db "### $tablename" "end";
+	# if the database is a directory, then the tables are separate files
+	# the table file needs to be created first
+	if stored_as_dir; then
+		touch $(tablefile "$table_name");
+	fi
+
+	# add table row to database
+	commit_to_db "$table_name" "### $table_name" "end";
 
 	# add ID as first column
-	commit_to_db "--id${delim}text" "end";
+	commit_to_db "$table_name" "--id${delim}text" "end";
 
 	# add columns, if present
 	if [[ "$columns" != "" ]]; then
@@ -105,7 +115,7 @@ create_table () {
 			fi
 
 			# commit column record to database
-			commit_to_db "--$name$delim$type" "end";
+			commit_to_db "$table_name" "--$name$delim$type" "end";
 
 		done<<<"$columns"
 	fi
@@ -122,17 +132,44 @@ drop_table () {
 		exit 1
 	fi
 
+	if stored_as_file; then
+		_drop_table_file "$table_name";
+	else
+		_drop_table_dir "$table_name";
+	fi
+
+	output "OK";
+}
+
+# Delete the table if the database is stored in a directory
+_drop_table_dir () {
+	local table_name="$1";
+
+	# lock table so nobody else can write while we are
+	lock "$table_name";
+
+	# remove the table file inside the database dir
+	rm $(tablefile "$table_name");
+
+	# unlock the table again
+	unlock "$table_name";
+}
+
+# Delete the table if the database is stored in one file
+_drop_table_file () {
+	local table_name="$1";
+
 	# lock table so nobody else can write while we are
 	lock "$table_name";
 
 	# fetch line numbers of all records we'll remove
-	line_number_start=$(cat -n "$db_file" | \
+	line_number_start=$(cat -n "$(tablefile "$table_name")" | \
 		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
 		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
 		awk '{print $1}' | \
 		head -n1);
 
-	line_number_end=$(cat -n "$db_file" | \
+	line_number_end=$(cat -n "$(tablefile "$table_name")" | \
 		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
 		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
 		awk '{print $1}' | \
@@ -146,38 +183,39 @@ drop_table () {
 	fi
 
 	# remove records and columns by line number range
-	delete_lines_by_number_range "$line_number_start" "$line_number_end"
+	delete_lines_by_number_range "$table_name" "$line_number_start" "$line_number_end"
 
 	# now for the table
-	local line_number_table=$(egrep -n "^### $table_name" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	local line_number_table=$(egrep -n "^### $table_name" "$(tablefile "$table_name")" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
+	# if we can't determine the table location, we'll drop dead and cry out in attention seeking agony
 	if ! is_int "$line_number_table"; then
 
+		# unlock the table first, which is empty and still there. Nothing we can do.
 		unlock "$table_name";
+
 		fatal "Could not remove table, line number table could not be determined. Cause unknown.";
 		exit 1;
 	fi
 
 	# Delete table line
-	delete_line_by_number "$line_number_table"
+	delete_line_by_number "$table_name" "$line_number_table"
 
 	# Unlock table again
 	unlock "$table_name"
-
-	output "OK";
 }
 
 
 add_column () {
-	local tablename="$1";
+	local table_name="$1";
 	local name="$2";
 	local type="$3";
 	local compiled_column="--$name$delim$type";
 
-	if ! table_exists "$tablename"; then
-		fatal "Table \"$tablename\" doesn't exist.";
+	if ! table_exists "$table_name"; then
+		fatal "Table \"$table_name\" doesn't exist.";
 		exit 1;
-	elif column_exists "$tablename" "$name"; then
+	elif column_exists "$table_name" "$name"; then
 		fatal "Column \"$name\" already exists.";
 		exit 1;
 	elif ! valid_column_name "$name"; then
@@ -189,32 +227,30 @@ add_column () {
 	fi
 
 	# get line count for last column
-	local last_column_linecount=$(cat -n "$db_file" | \
-		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $tablename/,/###/p" | \
+	local last_column_linecount=$(cat -n "$(tablefile "$table_name")" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
 		grep '^[[:space:]]*[0-9]*[[:space:]]*--' | \
 		tail -n1 | \
 		awk '{print $1}');
 
-	commit_to_db "$compiled_column" "$last_column_linecount";
+	commit_to_db "$table_name" "$compiled_column" "$last_column_linecount";
 
 	output "OK";
 }
 
 rename_column () {
-	local tablename="$1";
+	local table_name="$1";
 	local name="$2";
 	local new_name="$3";
 	local new_type="$4";
 
-	#local compiled_column="--$name$delim$type";
-
-	if ! table_exists "$tablename"; then
-		fatal "Table \"$tablename\" doesn't exist.";
+	if ! table_exists "$table_name"; then
+		fatal "Table \"$table_name\" doesn't exist.";
 		exit 1;
-	elif ! column_exists "$tablename" "$name"; then
+	elif ! column_exists "$table_name" "$name"; then
 		fatal "Column \"$name\" doesn't exist.";
 		exit 1;
-	elif column_exists "$tablename" "$new_name"; then
+	elif column_exists "$table_name" "$new_name"; then
 		fatal "Column \"$new_name\" already exists. Please choose another name.";
 		exit 1;
 	elif ! valid_column_name "$new_name"; then
@@ -226,8 +262,8 @@ rename_column () {
 	fi
 
 	# get line count for last column
-	local found_column_record=$(cat -n "$db_file" | \
-		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $tablename/,/###/p" | \
+	local found_column_record=$(cat -n "$(tablefile "$table_name")" | \
+		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
 		grep "^[[:space:]]*[0-9]*[[:space:]]*--$name|");
 
 	# did we find the column?
@@ -236,12 +272,9 @@ rename_column () {
 		local column=$(echo "$found_column_record" | awk '{print $2}');
 		local column_line_number=$(echo "$found_column_record" | awk '{print $1}');
 
-		#echo "Table \"$tablename\", renaming column \"$name\" to \"$new_name\"";
-		#echo "Found column on line $column_line_number";
+		sed -i "${column_line_number}s/--[a-zA-Z0-9_]*|/--$new_name|/" "$(tablefile "$table_name")";
 
-		sed -i "${column_line_number}s/--[a-zA-Z0-9_]*|/--$new_name|/" "$db_file";
-
-		if column_exists "$tablename" "$new_name"; then
+		if column_exists "$table_name" "$new_name"; then
 			output "OK";
 		else
 			fatal "Column could not be renamed. Unknown error. #101";
@@ -265,13 +298,13 @@ drop_column () {
 	fi
 
 	# get all columns, numbered
-	local columns=$(cat "$db_file" | \
+	local columns=$(cat "$(tablefile "$table_name")" | \
 		sed -n "/^### $table_name/,/^###/p" | \
 		grep "^--" | grep -n "");
 
 	# get the records and the number for our column (nth column)
 	local column_number=$(echo "$columns" | grep "\-\-$column_name|" | awk "BEGIN{FS=\":\"} {print \$1}");
-	local records=$(cat "$db_file" | sed -n "/### $table_name\$/,/###/p" | grep -v '^--' | grep -v "^###");
+	local records=$(cat "$(tablefile "$table_name")" | sed -n "/### $table_name\$/,/###/p" | grep -v '^--' | grep -v "^###");
 
 	# replace value of the to-be-dropped column to a fixed value
 	local column_droppings=$(echo "$records" | awk "BEGIN{FS=\"\\\\|o_o\\\\|\"; OFS=\"|o_o|\"} {\$$column_number=\"COLUMN_DROPPINGS\"; print \$0}");
@@ -285,35 +318,35 @@ drop_column () {
 	column_droppings="${column_droppings::${#column_droppings}-2}";
 
 	# fetch line numbers of all records in the table
-	records_line_number_start=$(cat -n "$db_file" | \
+	records_line_number_start=$(cat -n "$(tablefile "$table_name")" | \
 		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
 		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
 		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*--" | \
 		awk '{print $1}' | \
 		head -n1);
 
-	records_line_number_end=$(cat -n "$db_file" | \
+	records_line_number_end=$(cat -n "$(tablefile "$table_name")" | \
 		sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | \
 		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*###" | \
 		egrep -v "^[[:space:]]*[0-9]*[[:space:]]*--" | \
 		awk '{print $1}' | \
 		tail -n1);
 
-	table_line_number=$(grep -n "^### $table_name\$" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	table_line_number=$(grep -n "^### $table_name\$" "$(tablefile "$table_name")" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
-	column_line_number=$(cat -n "$db_file" | sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | grep -n "^[[:space:]]*[0-9]*[[:space:]]*--$column_name|" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	column_line_number=$(cat -n "$(tablefile "$table_name")" | sed -n "/^[[:space:]]*[0-9]*[[:space:]]*### $table_name/,/###/p" | grep -n "^[[:space:]]*[0-9]*[[:space:]]*--$column_name|" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
 	#@tag_droppings
 	if is_int "$records_line_number_start" && is_int "$records_line_number_end" && is_int "$table_line_number" && is_int "$column_line_number"; then
 
 		# delete the column
-		delete_line_by_number "$column_line_number"
+		delete_line_by_number "$table_name" "$column_line_number"
 
 		# remove old records
-		delete_lines_by_number_range "$records_line_number_start" "$records_line_number_end"
+		delete_lines_by_number_range "$table_name" "$records_line_number_start" "$records_line_number_end"
 
 		# commit new records to db
-		commit_to_db "$column_droppings" "$table_line_number"
+		commit_to_db "$table_name" "$column_droppings" "$table_line_number"
 
 		if ! column_exists "$table_name" "$column_name"; then
 			output "OK";
@@ -328,10 +361,10 @@ drop_column () {
 }
 
 column_exists () {
-	local tablename="$1";
+	local table_name="$1";
 	local column="$2";
 
-	local columns_in_db=$(get_columns "$tablename" "name" | jq -r '.[]');
+	local columns_in_db=$(get_columns "$table_name" "name" | jq -r '.[]');
 
 	if [[ $(echo "$columns_in_db" | grep "^$column\$" | wc -l) -ge 1 ]]; then
 		true;
@@ -351,20 +384,25 @@ valid_column_type () {
 }
 
 rename_table () {
-	local tablename="$1"
-	local new_tablename="$2";
+	local table_name="$1"
+	local new_table_name="$2";
 
-	if ! table_exists "$tablename"; then
-		fatal "Table \"$tablename\" does not exist.";
+	if ! table_exists "$table_name"; then
+		fatal "Table \"$table_name\" does not exist.";
 		exit 1;
 	fi
 
-	if ! valid_table_name "$new_tablename"; then
+	if ! valid_table_name "$new_table_name"; then
 		exit 1;
 	fi
 
 	#@tag_renametable
-	sed -i "s/^### $tablename$/### $new_tablename/g" "$db_file";
+	sed -i "s/^### $table_name$/### $new_table_name/g" "$(tablefile "$table_name")";
+
+	# if the database is stored as a directory, we have to rename the table file too
+	if stored_as_dir; then
+		mv "$(tablefile "$table_name")" "$(tablefile "$new_table_name")"
+	fi
 
 	output "OK";
 }
@@ -385,3 +423,18 @@ valid_table_name () {
 	true;
 }
 
+# Compute the file location of a given table. It can be one of two:
+#
+# 1) The database is a directory, and the table is a file inside
+# 2) The database is a file, and the table is there alongside all other tables
+#
+tablefile () {
+	local table_name="$1";
+	local database_location="$(databasefile)";
+
+	if stored_as_file; then
+		echo "$database_location";
+	else
+		echo "$db_dir/$(database)/$table_name";
+	fi
+}

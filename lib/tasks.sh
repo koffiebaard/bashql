@@ -2,66 +2,66 @@
 
 task_search_in_table () {
 	local select="$(get_argument 'select')";
-	local tablename="$(filter_table $(get_argument 'from'))";
+	local table_name="$(filter_table $(get_argument 'from'))";
 	local search_string="$(get_argument 'find')";
 	local limit="$(get_argument 'limit')";
 
-	# validate tablename
-	if ! table_exists "$tablename"; then
-		echo "Error: Table \"$tablename\" does not exist.";
+	# validate table_name
+	if ! table_exists "$table_name"; then
+		echo "Error: Table \"$table_name\" does not exist.";
 		exit 1;
 	fi
 
-	get "$(from_table $tablename)" "$tablename" "$select" "$search_string" "$limit";
+	get "$(from_table $table_name)" "$table_name" "$select" "$search_string" "$limit";
 }
 
 task_list_records_in_table () {
 	local select="$(get_argument 'select')";
-	local tablename="$(filter_table $(get_argument 'from'))";
+	local table_name="$(filter_table $(get_argument 'from'))";
 	local limit="$(get_argument 'limit')";
 
-	# validate tablename
-	if ! table_exists "$tablename"; then
-		echo "Error: Table \"$tablename\" does not exist.";
+	# validate table_name
+	if ! table_exists "$table_name"; then
+		echo "Error: Table \"$table_name\" does not exist.";
 		exit 1;
 	fi
 
-	get "$(from_table $tablename)" "$tablename" "$select" "" "$limit";
+	get "$(from_table $table_name)" "$table_name" "$select" "" "$limit";
 }
 
 
 task_get_record_by_id () {
 	local select="$(get_argument 'select')";
 	local id="$(get_argument 'id')";
-	local tablename="$(filter_table $(get_argument 'from'))";
+	local table_name="$(filter_table $(get_argument 'from'))";
 
-	# validate tablename
-	if ! table_exists "$tablename"; then
-		echo "Error: Table \"$tablename\" does not exist.";
+	# validate table_name
+	if ! table_exists "$table_name"; then
+		echo "Error: Table \"$table_name\" does not exist.";
 		exit 1;
 	fi
 
-	get "$(record_by_id $id)" "$tablename" "$select" "" "";
+	get "$(record_by_id $id)" "$table_name" "$select" "" "";
 }
 
 
 task_add_record () {
-	local tablename="$(filter_table $(get_argument 'into'))";
+	local table_name="$(filter_table $(get_argument 'into'))";
 	local title="$(get_argument 'title')";
 	local value="$(get_argument 'value')";
 
-	# validate tablename
-	if ! table_exists "$tablename"; then
-		output "Error: Table \"$tablename\" does not exist.";
+	# validate table_name
+	if ! table_exists "$table_name"; then
+		output "Error: Table \"$table_name\" does not exist.";
 		exit 1;
 	fi
 
-	add "$tablename" "$title" "$value";
+	add "$table_name" "$title" "$value";
 }
 
 
 task_update_record () {
-	local tablename="$(filter_table $(get_argument 'update'))";
+	local table_name="$(filter_table $(get_argument 'update'))";
 	local id="$(get_argument 'id')";
 	local title="$(get_argument 'title')";
 	local value="$(get_argument 'value')";
@@ -71,12 +71,12 @@ task_update_record () {
 		exit 1;
 	fi
 
-	if ! id_belongs_to_table "$id" "$tablename"; then
-		output "Error: ID \"$id\" does not belong to table \"$tablename\".";
+	if ! id_belongs_to_table "$id" "$table_name"; then
+		output "Error: ID \"$id\" does not belong to table \"$table_name\".";
 		exit 1;
 	fi
 
-	update "$id" "$tablename";
+	update "$id" "$table_name";
 }
 
 
@@ -105,18 +105,17 @@ task_delete_record () {
 	fi
 }
 
-
 task_create_table () {
-	local tablename="$(filter_table $(get_argument 'table'))";
+	local table_name="$(filter_table $(get_argument 'table'))";
 	local columns="$(get_argument 'columns')";
 
-	create_table "$tablename" "$columns";
+	create_table "$table_name" "$columns";
 }
 
 task_drop_table () {
-	local tablename="$(filter_table $(get_argument 'table'))";
+	local table_name="$(filter_table $(get_argument 'table'))";
 
-	drop_table "$tablename";
+	drop_table "$table_name";
 }
 
 task_list_tables () {
@@ -126,10 +125,10 @@ task_list_tables () {
 }
 
 task_rename_table () {
-	local tablename="$(filter_table $(get_argument 'table'))";
-	local new_tablename="$(filter_table $(get_argument 'to'))";
+	local table_name="$(filter_table $(get_argument 'table'))";
+	local new_table_name="$(filter_table $(get_argument 'to'))";
 
-	rename_table "$tablename" "$new_tablename";
+	rename_table "$table_name" "$new_table_name";
 }
 
 task_list_databases () {
@@ -139,9 +138,9 @@ task_list_databases () {
 }
 
 task_info_table () {
-	local tablename="$(filter_table $(get_argument 'describe'))";
+	local table_name="$(filter_table $(get_argument 'describe'))";
 
-	local payload=$(get_columns "$tablename");
+	local payload=$(get_columns "$table_name");
 	local returncode=$?;
 
 	output "$payload";
@@ -149,27 +148,27 @@ task_info_table () {
 }
 
 task_add_column () {
-	local tablename="$(filter_table $(get_argument 'table'))";
+	local table_name="$(filter_table $(get_argument 'table'))";
 	local name=$(get_argument 'addcolumn' | awk '{print $1}');
 	local type=$(get_argument 'addcolumn' | awk '{print $2}');
 
-	add_column "$tablename" "$name" "$type";
+	add_column "$table_name" "$name" "$type";
 }
 
 task_rename_column () {
-	local tablename="$(filter_table $(get_argument 'table'))";
+	local table_name="$(filter_table $(get_argument 'table'))";
 	local name=$(get_argument 'rename');
 	local new_name=$(get_argument 'to' | awk '{print $1}');
 	local new_type=$(get_argument 'to' | awk '{print $2}');
 
-	rename_column "$tablename" "$name" "$new_name" "$new_type"
+	rename_column "$table_name" "$name" "$new_name" "$new_type"
 }
 
 task_drop_column () {
-	local tablename="$(filter_table $(get_argument 'table'))";
+	local table_name="$(filter_table $(get_argument 'table'))";
 	local name=$(get_argument 'drop');
 
-	drop_column "$tablename" "$name";
+	drop_column "$table_name" "$name";
 }
 
 task_persist_database () {
@@ -188,8 +187,9 @@ task_persist_database () {
 
 task_create_database () {
 	local database_name="$(get_argument "database")";
+	local stored_as_file="$(get_argument "file")";
 
-	create_database "$database_name";
+	create_database "$database_name" "$stored_as_file";
 }
 
 task_drop_database () {

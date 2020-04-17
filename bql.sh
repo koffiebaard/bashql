@@ -43,13 +43,6 @@ if [[ $(database) == "" ]]; then
 fi
 
 
-#lock "test";
-
-#echo "lock succeeded! yay!";
-
-#unlock "test"
-
-
 
 if [[ $(get_argument "use") != "" ]]; then
 	task_persist_database
@@ -118,7 +111,7 @@ elif [[ $(get_argument 'dino') == 1 || $(get_argument 'rawr') == 1 ]]; then
 #@tag_test
 elif [[ $(get_argument 'test') == 1 ]]; then
 
-	$curdir/tests.sh
+	$curdir/tests.sh "$(get_argument 'dir')" "$(get_argument 'file')"
 
 elif [[ $(get_argument 'help') == 1 ]]; then
 

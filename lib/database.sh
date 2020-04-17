@@ -49,6 +49,7 @@ set_database () {
 
 create_database () {
 	local db="$1";
+	local stored_as_file="$2";
 
 	if db_exists "$db"; then
 		fatal "Database already exists.";
@@ -59,7 +60,11 @@ create_database () {
 		exit 1;
 	fi
 
-	touch "$db_dir/$db";
+	if [[ "$stored_as_file" == 1 ]]; then
+		touch "$db_dir/$db";
+	else
+		mkdir "$db_dir/$db";
+	fi
 
 	if db_exists "$db"; then
 		output "OK";
@@ -77,7 +82,11 @@ drop_database () {
 		exit 1;
 	fi
 
-	rm "$db_dir/$db";
+	if stored_as_file; then
+		rm "$db_dir/$db";
+	else
+		rm -rf "$db_dir/$db";
+	fi
 
 	if ! db_exists "$db"; then
 		output "OK";
@@ -96,6 +105,11 @@ rename_database () {
 		exit 1;
 	fi
 
+	if db_exists "$new_db_name"; then
+		fatal "Database \"$new_db_name\" already exists.";
+		exit 1;
+	fi
+
 	if ! valid_db_name "$new_db_name"; then
 		exit 1;
 	fi
@@ -108,7 +122,7 @@ rename_database () {
 db_exists () {
 	local db="$1";
 
-	if [[ -f "$db_dir/$db" ]]; then
+	if [[ -e "$db_dir/$db" ]]; then
 		true;
 	else
 		false;
@@ -131,4 +145,8 @@ valid_db_name () {
 	true;
 }
 
+databasefile () {
+	local database_location="$db_dir/$(database)";
 
+	echo "$database_location";
+}

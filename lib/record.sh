@@ -3,7 +3,7 @@
 record_by_id () {
 	id="$1";
 
-	grep "^$id|" "$db_file"
+	grep "^$id|" $(tablefile "$table_name")
 }
 
 id_in_db () {
@@ -20,9 +20,9 @@ id_in_db () {
 
 id_belongs_to_table () {
 	local id="$1";
-	local tablename="$2";
+	local table_name="$2";
 
-	local record=$(from_table "$tablename" | grep "^$id|");
+	local record=$(from_table "$table_name" | grep "^$id|");
 
 	# record found? it's in this table!
 	if [[ "$record" != "" ]]; then
@@ -34,7 +34,7 @@ id_belongs_to_table () {
 
 get () {
 	local records="$1";
-	local tablename="$2";
+	local table_name="$2";
 	local select_fields="$3";
 	local search_string="$4";
 	local limit="$5";
@@ -50,7 +50,7 @@ get () {
 		exit 0;
 	fi
 
-	local column_names=$(get_columns "$tablename" "name");
+	local column_names=$(get_columns "$table_name" "name");
 
 	local record_count=1;
 	record_array='[]';
@@ -133,21 +133,24 @@ add () {
 	local new_id=$(uuidgen);
 	local new_record=$(build_new_record "$table_name" "$new_id");
 
+	# lock table because other operations can affect ours
 	lock "$table_name";
 
 	# line number of this table
-	line_number_table=$(grep -n "^### $table_name\$" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	line_number_table=$(grep -n "^### $table_name\$" $(tablefile "$table_name") | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
 	if ! is_int $line_number_table; then
 
+		# unlock again, nothing we can do
 		unlock "$table_name";
 
 		fatal "Table \"$table_name\" could not be located.";
 		exit 1;
 	fi
 
-	commit_to_db "$new_record" "$line_number_table"
+	commit_to_db "$table_name" "$new_record" "$line_number_table"
 
+	# unlock again, we're done
 	unlock "$table_name";
 
 	if id_in_db "$new_id"; then
@@ -161,12 +164,12 @@ add () {
 
 
 build_new_record () {
-	local tablename="$1";
+	local table_name="$1";
 	local id="$2";
 	local fetch_from_old_record="$3";
 
 	args=$(echo "$argument_list" | egrep -v 'update|insert|into');
-	local columns=$(get_columns "$tablename");
+	local columns=$(get_columns "$table_name");
 
 	local new_record="$id";
 
@@ -191,7 +194,7 @@ build_new_record () {
 
 		# or shall we fetch the value from the previous record in the db?
 		elif [[ "$fetch_from_old_record" == 1 ]]; then
-			value=$(get "$(record_by_id $id)" "$tablename" "$column_name" "" "" | jq -r ".[].$column_name");
+			value=$(get "$(record_by_id $id)" "$table_name" "$column_name" "" "" | jq -r ".[].$column_name");
 
 			# jq has null implemented, but shell of course doesn't.
 			if [[ "$value" == "null" ]]; then
@@ -213,7 +216,7 @@ build_new_record () {
 id_to_line_number () {
 	id="$1";
 
-	local line_number=$(egrep -n "^$id" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	local line_number=$(egrep -n "^$id" $(tablefile "$table_name") | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
 	if is_int "$line_number"; then
 		echo "$line_number";
@@ -224,10 +227,11 @@ delete () {
 	local id="$1";
 	local table_name="$2";
 
+	# lock table so nobody else can write while we are
 	lock "$table_name";
 
 	# get line number by matching the ID
-	local line_number=$(egrep -n "^$id" "$db_file" | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
+	local line_number=$(egrep -n "^$id" $(tablefile "$table_name") | awk '{print $1}' | sed 's/^\([0-9]*\):.*/\1/g');
 
 	if ! is_int "$line_number"; then
 
@@ -237,7 +241,7 @@ delete () {
 	fi
 
 	# delete by line number
-	delete_line_by_number "$line_number"
+	delete_line_by_number "$table_name" "$line_number"
 
 	# unlock table again
 	unlock "$table_name";
@@ -264,7 +268,7 @@ update () {
 	local escaped_updated_record=$(echo "$updated_record" | sed -e 's/[\/&]/\\&/g');
 
 	# replace line by line number
-	sed -i "${line_number}s/.*/$escaped_updated_record/" "$db_file";
+	sed -i "${line_number}s/.*/$escaped_updated_record/" "$(tablefile "$table_name")";
 
 	# unlock table again
 	unlock "$table_name"
@@ -276,7 +280,7 @@ update () {
 from_table () {
 	table_name="$1";
 
-	cat "$db_file" | sed -n "/### $table_name\$/,/###/p" | grep -v '^###' | grep -v '^--'
+	cat $(tablefile "$table_name") | sed -n "/### $table_name\$/,/###/p" | grep -v '^###' | grep -v '^--'
 }
 
 valid_column_name () {

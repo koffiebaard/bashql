@@ -1,17 +1,27 @@
 #!/bin/bash
 
+# sad. no cake noms.
+cake_noms=0;
+
+# this comes after the cake noms
+cake_shats=0;
+
+test_db_per_dir="$1";
+test_db_per_file="$2";
+
 validate () {
-        is="$2"
-        should_be="$3"
+	is="$2"
+	should_be="$3"
 
-        printf "%-90s%s" "$(tput setaf 7)$1$(tput sgr0)";
+	printf "%-90s%s" "$(tput setaf 7)$1$(tput sgr0)";
 
-        if [[ "$is" == "$should_be" ]]; then
-                printf "$(tput setaf 2)Passed.$(tput sgr0)%-20s\n";
-
-        else
-                printf "$(tput setaf 1)Failed. Should be \"$should_be\", is \"$is\"$(tput sgr0)%-20s\n";
-        fi
+	if [[ "$is" == "$should_be" ]]; then
+		printf "$(tput setaf 2)Passed.$(tput sgr0)%-20s\n";
+		let cake_noms++;
+	else
+		printf "$(tput setaf 1)Failed. Should be \"$should_be\", is \"$is\"$(tput sgr0)%-20s\n";
+		let cake_shats++;
+	fi
 }
 
 
@@ -43,7 +53,13 @@ validate "set --limit to two" $(bql --select=title --from=cake --limit=2 --filte
 
 #@tag_setup_database
 printf "\n$(tput setaf 5)Set up database$(tput sgr0)\n"
-validate "Create database" $(bql --create --database=automatic_test) "OK"
+
+if [[ "$test_db_per_file" == "1" ]]; then
+	validate "Create database" $(bql --create --database=automatic_test --file) "OK"
+else
+	validate "Create database" $(bql --create --database=automatic_test) "OK"
+fi
+
 validate "Create same database again" $(bql --create --database=automatic_test &> /dev/null || echo "naw") "naw"
 validate "Select said database" $(bql --use=automatic_test) "OK"
 
@@ -204,12 +220,46 @@ printf "\n$(tput setaf 5)Drop database$(tput sgr0)\n"
 validate "drop database" "$(bql --drop --database=automatic_titty)" "OK"
 validate "drop database: show tables" "$(bql --show --tables &> /dev/null || echo "naw")" "naw"
 
-printf "\n";
-
-
 
 # reset the session file
 if [[ -f "/tmp/ish_session_db.test.backup" ]]; then
 	mv /tmp/ish_session_db.test.backup /tmp/ish_session_db
 fi
 
+
+# send out statistics
+
+# line separator
+printf "$(tput setaf 7)\n\n";
+printf "%-90s" | tr ' ' '-';
+printf "$(tput sgr0)"
+
+# header, shows which storage we're testing
+if [[ "$test_db_per_file" == 1 ]]; then
+	printf "\n\n$(tput setaf 5)Test results file storage$(tput sgr0)\n";
+else
+	printf "\n\n$(tput setaf 5)Test results dir storage$(tput sgr0)\n"
+fi
+
+# test results
+printf "$(tput setaf 2)[$cake_noms]$(tput sgr0) $(tput setaf 7)tests succeeded$(tput sgr0)";
+
+if [[ $cake_shats -gt 0 ]]; then
+	printf ", $(tput setaf 1)[$cake_shats]$(tput sgr0) $(tput setaf 7)tests failed.$(tput sgr0)\n\n";
+else
+	printf "$(tput setaf 7).$(tput sgr0)\n\n";
+fi
+
+# should we continue to test the other storage method?
+if [[ "$test_db_per_file" != 1 && "$test_db_per_dir" == "" ]]; then
+
+	printf "$(tput setaf 7)Continue with database-per-file? [Y/n] $(tput sgr0)";
+
+	read -n1 continue_with_db_per_file;
+
+	if [[ "$continue_with_db_per_file" == "" || "$continue_with_db_per_file" == "y" || "$continue_with_db_per_file" == "Y" ]]; then
+		bql --test --file;
+	fi
+
+	echo "";
+fi

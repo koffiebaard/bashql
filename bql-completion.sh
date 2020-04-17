@@ -33,8 +33,8 @@ _bashql_completion() {
 	    local insert_opts="--into=";
 
 	    #@tag_create
-	    local create_opts="--table --database";
-	    	local create_opts_table="--columns --verbose";
+	    local create_opts="--table= --database=";
+	    	local create_opts_table="--columns=";
 
 	    #@tag_update
 	    local update_opts="--id --verbose";
