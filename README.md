@@ -1,7 +1,5 @@
 ![BashQL](docs/logo.png)
 
-Database completely built in bash.
-
 BashQL (Bash Query Language) is a database management system (dbms) and database engine rolled into one. Very quick setup and transparent: databases are set up locally in the BashQL install directory. Easy to back up and ship elsewhere.
 
 Note: It's a work in progress, keep in mind that the storage format can still change.
@@ -48,6 +46,13 @@ bql --test
 # Check again, just to be sure
 bql --rawr
 ```
+
+
+## Documentation
+
+The help function is up to date:
+
+![bql help function](docs/screenshot-help.png)
 
 
 ## Examples

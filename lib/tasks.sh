@@ -82,7 +82,7 @@ task_update_record () {
 
 task_delete_record () {
 	local id="$(get_argument 'id')";
-	local tablename="$(filter_table $(get_argument 'from'))";
+	local table_name="$(filter_table $(get_argument 'from'))";
 
 
 	if ! id_in_db "$id"; then
@@ -90,12 +90,12 @@ task_delete_record () {
 		exit 1;
 	fi
 
-	if ! id_belongs_to_table "$id" "$tablename"; then
-		output "Error: ID \"$id\" does not belong to table \"$tablename\".";
+	if ! id_belongs_to_table "$id" "$table_name"; then
+		output "Error: ID \"$id\" does not belong to table \"$table_name\".";
 		exit 1;
 	fi
 
-	delete "$id";
+	delete "$id" "$table_name";
 
 	if [[ $? == 0 ]]; then
 		output "OK";
@@ -247,4 +247,14 @@ task_dino () {
 	done
 
 	printf "\n\n\n\n\n\n\n\n";
+}
+
+task_current_database () {
+
+	if [[ $(database) != "" ]]; then
+		echo $(database);
+		exit 0;
+	else
+		exit 1;
+	fi
 }

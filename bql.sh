@@ -9,9 +9,11 @@ fi
 
 curdir="$( cd -P "$( dirname "$source" )" >/dev/null 2>&1 && pwd )"
 
+# ID of this bashql instance
+instance_id=$(uuidgen);
 
-source "$curdir/lib/db-connector.sh";
-source "$curdir/tasks.sh";
+source "$curdir/lib/db-handler.sh";
+source "$curdir/lib/tasks.sh";
 
 sanitized_arguments=$(echo "$@" | sed 's/\(--[a-zA-Z_]*\)/\n\1\n/g' | grep "^--" | paste -sd " ");
 
@@ -26,6 +28,7 @@ if [[ $(database) == "" ]]; then
 	if  [[ $(get_argument "use") != "" ]] || \
 	    [[ $(get_argument "help") == 1 ]] || \
 	    [[ $(get_argument "test") == 1 ]] || \
+	    [[ $(get_argument "select") == 1 || $(get_argument "database") == 1 && $(get_argument "from") == "" ]] || \
 	    [[ $(get_argument "rawr") == 1 || $(get_argument "dino") == 1 ]] || \
 		[[ $(get_argument "create") != "" && $(get_argument "database") != "" ]] || \
 		[[ $(get_argument "drop") != "" && $(get_argument "database") != "" ]] || \
@@ -40,9 +43,19 @@ if [[ $(database) == "" ]]; then
 fi
 
 
+#lock "test";
+
+#echo "lock succeeded! yay!";
+
+#unlock "test"
+
+
 
 if [[ $(get_argument "use") != "" ]]; then
 	task_persist_database
+
+elif [[ $(get_argument "select") == 1 && $(get_argument "database") == 1 && $(get_argument "from") == "" ]]; then
+	task_current_database
 
 elif [[ $(get_argument "show") == 1 && $(get_argument "tables") == 1 ]]; then
 	task_list_tables
@@ -102,6 +115,7 @@ elif [[ $(get_argument "alter") == "" && $(get_argument "rename") != "" && $(get
 elif [[ $(get_argument 'dino') == 1 || $(get_argument 'rawr') == 1 ]]; then
 	task_dino
 
+#@tag_test
 elif [[ $(get_argument 'test') == 1 ]]; then
 
 	$curdir/tests.sh
@@ -112,5 +126,4 @@ elif [[ $(get_argument 'help') == 1 ]]; then
 else
 
 	echo "Sorry, i do not recognize your command. Try --help"
-
 fi

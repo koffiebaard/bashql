@@ -2,7 +2,6 @@
 
 session_file="/tmp/ish_session_db";
 log_dir="$curdir/log";
-setting_session_should_expire=0;
 
 set -eE -o functrace
 

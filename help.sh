@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "bql v0.2"
 
 echo ""
@@ -81,6 +83,9 @@ printf "%s\n" "$(tput setaf 6)bql$(tput sgr0) $(tput setaf 6)--create$(tput sgr0
 
 printf "\t%-50s%s" "$(tput setaf 7)Select database$(tput sgr0)"
 printf "%s\n" "$(tput setaf 6)bql$(tput sgr0) $(tput setaf 6)--use=$(tput sgr0)database"
+
+printf "\t%-50s%s" "$(tput setaf 7)Show which database is selected$(tput sgr0)"
+printf "%s\n" "$(tput setaf 6)bql$(tput sgr0) $(tput setaf 6)--select --database$(tput sgr0)"
 
 printf "\t%-50s%s" "$(tput setaf 7)Rename database$(tput sgr0)"
 printf "%s\n" "$(tput setaf 6)bql$(tput sgr0) $(tput setaf 6)--rename$(tput sgr0) $(tput setaf 6)--database=$(tput sgr0)database $(tput setaf 6)--to=$(tput sgr0)newdatabase"

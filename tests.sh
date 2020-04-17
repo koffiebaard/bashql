@@ -27,7 +27,9 @@ bql --drop --database=automatic_test &> /dev/null
 #@tag_generic_database
 printf "\n$(tput setaf 5)Generic database$(tput sgr0)\n"
 validate "Select non-existent database" $(bql --use=supertestcake &> /dev/null || echo "naw") "naw"
+validate "Show selected database (fails)" $(bql --select --database &> /dev/null || echo "naw") "naw"
 validate "Select correct database" $(bql --use=example) "OK"
+validate "Show selected database (succeeds)" $(bql --select --database) "example"
 validate "Drop non-existent database" $(bql --drop --database=thisonedefinitelydoesnotexist &> /dev/null || echo "naw") "naw"
 
 
