@@ -1,6 +1,10 @@
 #!/bin/bash
 
-echo "bql v0.2"
+curdir="$( cd -P "$( dirname "$source" )" >/dev/null 2>&1 && pwd )"
+
+source "$curdir/lib/internals.sh";
+
+echo "bql $(current_version)"
 
 echo ""
 

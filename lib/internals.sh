@@ -409,3 +409,15 @@ get_argument () {
 		echo "${!dynamic_var}";
 	fi
 }
+
+current_version () {
+	local tag=$(git describe --tags);
+	local branch=$(git rev-parse --abbrev-ref HEAD);
+
+	if [[ "$branch" == "master" && "$tag" != "" ]]; then
+		echo "v$tag";
+	else
+		echo "[$branch]";
+	fi
+}
+
