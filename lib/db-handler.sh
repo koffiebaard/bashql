@@ -18,6 +18,8 @@ commit_to_db () {
 	local at_linecount="$3";
 	local last_linecount=$(get_last_linecount "$table_name");
 
+	#record=$(echo "$record" | sed -e 's/[\/&]/\\&/g');
+
 	# is it the last line in the file? add on a new line.
 	if [[ "$at_linecount" == "$last_linecount" || "$at_linecount" == "end" ]]; then
 		☕ "adding at the end..";

@@ -127,7 +127,7 @@ get () {
 
 
 add () {
-	local table_name="$1"
+	local table_name="$1";
 
 	# build new record
 	local new_id=$(uuidgen);
@@ -209,9 +209,13 @@ build_new_record () {
 		# sanitize the value
 		value=$(sanitize "$value");
 
+		#log_error "after sanitize: $value";
+
 		# ok, at least now it's not worse
 		new_record=$(append "$new_record" "$value" "$delim");
 	done
+
+	new_record=$(echo "$new_record" | sed -e 's/[\/&]/\\&/g');
 
 	# yay a new record!
 	output "$new_record";
@@ -269,13 +273,8 @@ update () {
 		exit 1;
 	fi
 
-	local escaped_updated_record=$(echo "$updated_record" | sed -e 's/[\/&]/\\&/g');
-
-	#@tag_update_sanitize
-	#escaped_updated_record=$(sanitize "$escaped_updated_record");
-
 	# replace line by line number
-	sed -i "${line_number}s/.*/$escaped_updated_record/" "$(tablefile "$table_name")";
+	sed -i "${line_number}s/.*/$updated_record/" "$(tablefile "$table_name")";
 
 	# unlock table again
 	unlock "$table_name"

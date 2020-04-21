@@ -130,6 +130,52 @@ validate "update col_bool" "$(bql --update=test --id="$insert_id" --col_bool=0)"
 validate "update to col_bool still there" "$(bql --select=col_bool --from=test --id="$insert_id" --filter=col_bool)" "0"
 
 
+#@tag_unicode_base64
+printf "\n$(tput setaf 5)Unicode and base64$(tput sgr0)\n"
+
+# generic base64 test
+insert_base64_id=$(bql --insert --into=test --col_text="VGhpcyBpcyBzb21lIHJhbmRvbSB0ZXh0IGJ1dCBiYXNlNjQgZW5jb2RlZCE=" --col_int=OTAwMQ== --col_bool=MQ== --base64);
+insert_base64_returncode=$?;
+
+validate "insert base64" "$insert_base64_returncode" "0"
+validate "  - col_text has correct value" "$(bql --select=col_text --from=test --id=$insert_base64_id --filter=col_text)" "This is some random text but base64 encoded!"
+validate "  - col_int has correct value" "$(bql --select=col_int --from=test --id=$insert_base64_id --filter=col_int)" "9001"
+validate "  - col_bool has correct value" "$(bql --select=col_bool --from=test --id=$insert_base64_id --filter=col_bool)" "1"
+
+# smileys, newlines
+insert_base64_id=$(bql --insert --into=test --col_text="8J+QlfCfkqggIGNvbnRlbnQgdGVzdArwn5C98J+SpgoKVGVlZWVlc3QKCgrwn5CV" --col_int=OTAwMQ== --col_bool=MQ== --base64);
+insert_base64_returncode=$?;
+
+validate "insert base64: newlines and emoji" "$insert_base64_returncode" "0"
+validate "  - col_text has correct value" "$(bql --select=col_text --from=test --id=$insert_base64_id --filter=col_text | head -c -1 | base64)" "8J+QlfCfkqggIGNvbnRlbnQgdGVzdArwn5C98J+SpgoKVGVlZWVlc3QKCgrwn5CV"
+
+# big blob of unicode
+insert_base64_id=$(bql --insert --into=test --col_text="8J+YgfCfmYLwn5mDCvCfjZHwn42GCvCfkJLwn5CQCvCfmIHwn6SX8J+YgQoKTWF0aGVtYXRpY3MgYW5kIFNjaWVuY2VzOgoKICDiiK4gReKLhWRhID0gUSwgIG4g4oaSIOKIniwg4oiRIGYoaSkgPSDiiI8gZyhpKSwg4oiAeOKIiOKEnTog4oyIeOKMiSA9IOKIkuKMiuKIknjijIssIM6xIOKIpyDCrM6yID0gwqwowqzOsSDiiKggzrIpLAoKICDihJUg4oqGIOKEleKCgCDiioIg4oSkIOKKgiDihJog4oqCIOKEnSDiioIg4oSCLCDiiqUgPCBhIOKJoCBiIOKJoSBjIOKJpCBkIOKJqiDiiqQg4oeSIChBIOKHlCBCKSwKCiAgMkjigoIgKyBP4oKCIOKHjCAySOKCgk8sIFIgPSA0Ljcga86pLCDijIAgMjAwIG1tCgpMaW5ndWlzdGljcyBhbmQgZGljdGlvbmFyaWVzOgoKICDDsGkgxLFudMmZy4huw6bKg8mZbsmZbCBmyZnLiG7Jm3TEsWsgyZlzb8qKc2nLiGXEscqDbgogIFkgW8uIyo9wc2lsyZRuXSwgWWVuIFtqyZtuXSwgWW9nYSBby4hqb8uQZ8mRXQoKQVBMOgoKICAoKFbijbNWKT3ijbPijbRWKS9W4oaQLFYgICAg4oy34oaQ4o2z4oaS4o204oiG4oiH4oqD4oC+4o2O4o2V4oyICgpOaWNlciB0eXBvZ3JhcGh5IGluIHBsYWluIHRleHQgZmlsZXM6CgogICDigKIg4oCYc2luZ2xl4oCZIGFuZCDigJxkb3VibGXigJ0gcXVvdGVzICAgICAgICAgCiAgIOKAoiBDdXJseSBhcG9zdHJvcGhlczog4oCcV2XigJl2ZSBiZWVuIGhlcmXigJ0gCiAgIOKAoiBMYXRpbi0xIGFwb3N0cm9waGUgYW5kIGFjY2VudHM6ICfCtGAKICAg4oCiIOKAmmRldXRzY2hl4oCYIOKAnkFuZsO8aHJ1bmdzemVpY2hlbuKAnAogICDigKIg4oCgLCDigKEsIOKAsCwg4oCiLCAz4oCTNCwg4oCULCDiiJI1Lys1LCDihKIKICAg4oCiIEFTQ0lJIHNhZmV0eSB0ZXN0OiAxbEl8LCAwT0QsIDhCCiAgIOKAoiB0aGUgZXVybyBzeW1ib2w6IOKUgiAxNC45NSDigqwg4pSCICAgIAoKR3JlZWsgKGluIFBvbHl0b25pYyk6CgogIFRoZSBHcmVlayBhbnRoZW06CgogIM6j4b2yIM6zzr3Pic+B4b23zrbPiSDhvIDPgOG9uCDPhOG9tM69IM664b25z4jOtw==" --col_int=OTAwMQ== --col_bool=MQ== --base64);
+insert_base64_returncode=$?;
+
+validate "insert base64: big blob of unicode with newlines" "$insert_base64_returncode" "0"
+validate "  - col_text has correct value" "$(bql --select=col_text --from=test --id=$insert_base64_id --filter=col_text | head -c -1 | base64 -w 0)" "8J+YgfCfmYLwn5mDCvCfjZHwn42GCvCfkJLwn5CQCvCfmIHwn6SX8J+YgQoKTWF0aGVtYXRpY3MgYW5kIFNjaWVuY2VzOgoKICDiiK4gReKLhWRhID0gUSwgIG4g4oaSIOKIniwg4oiRIGYoaSkgPSDiiI8gZyhpKSwg4oiAeOKIiOKEnTog4oyIeOKMiSA9IOKIkuKMiuKIknjijIssIM6xIOKIpyDCrM6yID0gwqwowqzOsSDiiKggzrIpLAoKICDihJUg4oqGIOKEleKCgCDiioIg4oSkIOKKgiDihJog4oqCIOKEnSDiioIg4oSCLCDiiqUgPCBhIOKJoCBiIOKJoSBjIOKJpCBkIOKJqiDiiqQg4oeSIChBIOKHlCBCKSwKCiAgMkjigoIgKyBP4oKCIOKHjCAySOKCgk8sIFIgPSA0Ljcga86pLCDijIAgMjAwIG1tCgpMaW5ndWlzdGljcyBhbmQgZGljdGlvbmFyaWVzOgoKICDDsGkgxLFudMmZy4huw6bKg8mZbsmZbCBmyZnLiG7Jm3TEsWsgyZlzb8qKc2nLiGXEscqDbgogIFkgW8uIyo9wc2lsyZRuXSwgWWVuIFtqyZtuXSwgWW9nYSBby4hqb8uQZ8mRXQoKQVBMOgoKICAoKFbijbNWKT3ijbPijbRWKS9W4oaQLFYgICAg4oy34oaQ4o2z4oaS4o204oiG4oiH4oqD4oC+4o2O4o2V4oyICgpOaWNlciB0eXBvZ3JhcGh5IGluIHBsYWluIHRleHQgZmlsZXM6CgogICDigKIg4oCYc2luZ2xl4oCZIGFuZCDigJxkb3VibGXigJ0gcXVvdGVzICAgICAgICAgCiAgIOKAoiBDdXJseSBhcG9zdHJvcGhlczog4oCcV2XigJl2ZSBiZWVuIGhlcmXigJ0gCiAgIOKAoiBMYXRpbi0xIGFwb3N0cm9waGUgYW5kIGFjY2VudHM6ICfCtGAKICAg4oCiIOKAmmRldXRzY2hl4oCYIOKAnkFuZsO8aHJ1bmdzemVpY2hlbuKAnAogICDigKIg4oCgLCDigKEsIOKAsCwg4oCiLCAz4oCTNCwg4oCULCDiiJI1Lys1LCDihKIKICAg4oCiIEFTQ0lJIHNhZmV0eSB0ZXN0OiAxbEl8LCAwT0QsIDhCCiAgIOKAoiB0aGUgZXVybyBzeW1ib2w6IOKUgiAxNC45NSDigqwg4pSCICAgIAoKR3JlZWsgKGluIFBvbHl0b25pYyk6CgogIFRoZSBHcmVlayBhbnRoZW06CgogIM6j4b2yIM6zzr3Pic+B4b23zrbPiSDhvIDPgOG9uCDPhOG9tM69IM664b25z4jOtw=="
+
+# braille
+insert_base64_id=$(bql --insert --into=test --col_text="4qGM4qCB4qCn4qCRIOKgvOKggeKgkiAg4qGN4qCc4qCH4qCR4qC54qCw4qCOIOKho+KgleKgjArioY3ioJzioIfioJHioLkg4qC64qCB4qCOIOKgmeKgkeKggeKgmeKgkiDioJ7ioJUg4qCD4qCRCuKgm+KglCDioLrioIrioLnioLIg4qG54qC74qCRIOKgiuKgjiDioJ3ioJUg4qCZ4qCz4qCD4qCe" --col_int=OTAwMQ== --col_bool=MQ== --base64);
+insert_base64_returncode=$?;
+
+validate "insert base64: braille" "$insert_base64_returncode" "0"
+validate "  - col_text has correct value" "$(bql --select=col_text --from=test --id=$insert_base64_id --filter=col_text | head -c -1 | base64 -w 0)" "4qGM4qCB4qCn4qCRIOKgvOKggeKgkiAg4qGN4qCc4qCH4qCR4qC54qCw4qCOIOKho+KgleKgjArioY3ioJzioIfioJHioLkg4qC64qCB4qCOIOKgmeKgkeKggeKgmeKgkiDioJ7ioJUg4qCD4qCRCuKgm+KglCDioLrioIrioLnioLIg4qG54qC74qCRIOKgiuKgjiDioJ3ioJUg4qCZ4qCz4qCD4qCe"
+
+printf "\n"
+
+validate "update base64: emoji + newlines" "$(bql --update=test --id="$insert_base64_id" --col_text='8J+QlfCfkqggIGNvbnRlbnQgdGVzdArwn5C98J+SpgoKVGVlZWVlc3QKCgrwn5CV' --base64)" "OK"
+validate "  - col_text has correct value" "$(bql --select=col_text --from=test --id="$insert_base64_id" --filter=col_text | head -c -1 | base64 -w 0)" "8J+QlfCfkqggIGNvbnRlbnQgdGVzdArwn5C98J+SpgoKVGVlZWVlc3QKCgrwn5CV"
+
+validate "update base64: runes" "$(bql --update=test --id="$insert_base64_id" --col_text='4Zq74ZuWIOGas+GaueGaq+GapiDhmqbhmqvhm48g4Zq74ZuWIOGbkuGaouGbnuGbliDhmqnhmr4g4Zqm4Zqr4ZuXIOGbmuGaquGavuGbnuGbliDhmr7hmqnhmrHhmqbhmrnhm5bhmqrhmrHhm57hmqLhm5cg4Zq54ZuB4ZqmIOGapuGaqiDhmrnhm5bhm6Xhmqs=' --base64)" "OK"
+validate "  - col_text has correct value" "$(bql --select=col_text --from=test --id="$insert_base64_id" --filter=col_text | head -c -1 | base64 -w 0)" "4Zq74ZuWIOGas+GaueGaq+GapiDhmqbhmqvhm48g4Zq74ZuWIOGbkuGaouGbnuGbliDhmqnhmr4g4Zqm4Zqr4ZuXIOGbmuGaquGavuGbnuGbliDhmr7hmqnhmrHhmqbhmrnhm5bhmqrhmrHhm57hmqLhm5cg4Zq54ZuB4ZqmIOGapuGaqiDhmrnhm5bhm6Xhmqs="
+
+validate "update base64: braille" "$(bql --update=test --id="$insert_base64_id" --col_text='4qGM4qCB4qCn4qCRIOKgvOKggeKgkiAg4qGN4qCc4qCH4qCR4qC54qCw4qCOIOKho+KgleKgjArioY3ioJzioIfioJHioLkg4qC64qCB4qCOIOKgmeKgkeKggeKgmeKgkiDioJ7ioJUg4qCD4qCRCuKgm+KglCDioLrioIrioLnioLIg4qG54qC74qCRIOKgiuKgjiDioJ3ioJUg4qCZ4qCz4qCD4qCe' --base64)" "OK"
+validate "  - col_text has correct value" "$(bql --select=col_text --from=test --id="$insert_base64_id" --filter=col_text | head -c -1 | base64 -w 0)" "4qGM4qCB4qCn4qCRIOKgvOKggeKgkiAg4qGN4qCc4qCH4qCR4qC54qCw4qCOIOKho+KgleKgjArioY3ioJzioIfioJHioLkg4qC64qCB4qCOIOKgmeKgkeKggeKgmeKgkiDioJ7ioJUg4qCD4qCRCuKgm+KglCDioLrioIrioLnioLIg4qG54qC74qCRIOKgiuKgjiDioJ3ioJUg4qCZ4qCz4qCD4qCe"
+
+
+
 #@tag_add_column
 printf "\n$(tput setaf 5)Add column$(tput sgr0)\n"
 validate "new column: add column \"cake\" type \"text\"" "$(bql --alter --table=test --addcolumn="cake text")" "OK"

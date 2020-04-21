@@ -376,7 +376,7 @@ string_length () {
 
 argument_list="";
 
-base64_arg_whitelist=(id select update delete alter use from table database filter);
+base64_arg_whitelist=(id select update delete alter use from into table database filter);
 
 # cli params will be dynamic variables
 for argument in "$@"

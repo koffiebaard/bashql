@@ -21,3 +21,9 @@ b2baa440-b0d2-4973-9180-21117de27c16|o_o|Mocha cake|o_o|8|o_o|2|o_o|2|o_o|999
 --table|o_o|text
 --chair|o_o|text
 --awesome|o_o|int
+### animals
+93c6d0a1-d48e-46e4-92f0-1c1e38d41e5f|o_o|panda|o_o|🐼
+93c6d0a1-d48e-46e4-92f0-1c1e38d41e5f|o_o|dino|o_o|🐲
+--id|o_o|text
+--name|o_o|text
+--animal|o_o|text
