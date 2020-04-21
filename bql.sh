@@ -26,6 +26,7 @@ if [[ $(database) == "" ]]; then
 
 	# these routes (copied from below) don't need a database connection
 	if  [[ $(get_argument "use") != "" ]] || \
+	    [[ $(get_argument "version") == 1 ]] || \
 	    [[ $(get_argument "help") == 1 ]] || \
 	    [[ $(get_argument "test") == 1 ]] || \
 	    [[ $(get_argument "select") == 1 || $(get_argument "database") == 1 && $(get_argument "from") == "" ]] || \
@@ -107,6 +108,10 @@ elif [[ $(get_argument "alter") == "" && $(get_argument "rename") != "" && $(get
 #@tag_rawr_dino
 elif [[ $(get_argument 'dino') == 1 || $(get_argument 'rawr') == 1 ]]; then
 	task_dino
+
+#@tag_version
+elif [[ $(get_argument 'version') == 1 ]]; then
+	task_current_version
 
 #@tag_test
 elif [[ $(get_argument 'test') == 1 ]]; then

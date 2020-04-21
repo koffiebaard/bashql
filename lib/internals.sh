@@ -78,9 +78,9 @@ output () {
 		else
 
 			if [[ $(get_argument "filter") != "" ]]; then
-				echo "$payload" | jq -r ".[].$(get_argument 'filter')";
+				printf "$payload" | jq -r ".[].$(get_argument 'filter')";
 			else
-				echo "$payload" | jq '.';
+				printf "$payload" | jq '.';
 			fi
 		fi
 	else
@@ -376,29 +376,31 @@ string_length () {
 
 argument_list="";
 
+base64_arg_whitelist=(id select update delete alter use from table database filter);
+
 # cli params will be dynamic variables
 for argument in "$@"
 do
-    key=$(echo $argument | cut -f1 -d=);
+	key=$(echo $argument | cut -f1 -d=);
 
-    # remove dashes ("-"), e.g. --help or -cake=delicious
-    key=$(echo $key | sed 's/\-//g');
+	# remove dashes ("-"), e.g. --help or -cake=delicious
+	key=$(echo $key | sed 's/\-//g');
 
-    # only assign value if present, otherwise asssume it's a flag
-    if [[ $argument == *"="* ]]; then
+	# only assign value if present, otherwise asssume it's a flag
+	if [[ $argument == *"="* ]]; then
 
-    	value=$(echo $argument | cut -f2- -d=);
+		value=$(echo $argument | cut -f2- -d=);
 
-    	if [[ "$@" == *"--base64"* ]]; then
-    		value=$(echo $value | base64 --decode);
-    	fi
-    else
-    	value="1"
-    fi
+		if [[ "$@" == *"--base64"* ]] && [[ ! " ${base64_arg_whitelist[@]} " =~ " ${key} " ]]; then
+			value=$(echo $value | base64 --decode);
+		fi
+	else
+		value="1"
+	fi
 
-    argument_list=$(append "$argument_list" "$key" $'\n');
+	argument_list=$(append "$argument_list" "$key" $'\n');
 
-    declare "arg_$key=$value"
+	declare "arg_$key=$value"
 done
 
 # arguments are dynamically assigned, so we need to expand the parameter to retrieve the value
@@ -421,3 +423,25 @@ current_version () {
 	fi
 }
 
+sanitize () {
+	local input="$1";
+
+	# sanitize values by putting them through jq
+	local jq_args=();
+	jq_args+=( --arg "column" "input" );
+	jq_args+=( --arg "value" "$input" );
+
+	jq_query=". | .[\$column]=\$value";
+
+	object=$(jq "${jq_args[@]}" "$jq_query" <<<'{}');
+
+	sanitized_input=$(echo "$object" | jq -r '.input');
+
+	# translate newlines to \n
+	sanitized_input=$(echo "$sanitized_input" | awk -v ORS='\\n' '1');
+
+	# remove trailing newline
+	sanitized_input=$(echo "$sanitized_input" | sed 's/\\n$//g');
+
+	echo "$sanitized_input";
+}

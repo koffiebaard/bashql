@@ -258,3 +258,7 @@ task_current_database () {
 		exit 1;
 	fi
 }
+
+task_current_version () {
+	echo "$(current_version)";
+}

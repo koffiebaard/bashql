@@ -1,9 +1,9 @@
 #!/bin/bash
 
 record_by_id () {
-	id="$1";
+	local id="$1";
 
-	grep "^$id|" $(tablefile "$table_name")
+	grep "^$id|" $(tablefile "$table_name");
 }
 
 id_in_db () {
@@ -55,7 +55,7 @@ get () {
 	local record_count=1;
 	record_array='[]';
 
-	while read record; do
+	while IFS= read -r record; do
 
 		local list_of_values=$(echo "$record" | sed 's/|o_o|/\n/g');
 
@@ -63,7 +63,7 @@ get () {
 		jq_query='.'
 
 		local key=0;
-		while IFS=$'\n' read value; do
+		while IFS= read -r value; do
 			local field=$(echo "$column_names" | jq -r ".[$key]");
 
 			# just in case the column count is off, just don't show any unknown fields
@@ -105,7 +105,7 @@ get () {
 			fi
 
 			key=$((key+1));
-		done<<<"$list_of_values"
+		done <<< "$list_of_values"
 
 		local record_object=$(jq "${jq_args[@]}" "$jq_query" <<<{});
 
@@ -120,7 +120,7 @@ get () {
 
 		record_count=$((record_count+1));
 
-	done<<<"$records"
+	done <<< "$records"
 
 	output "$record_array";
 }
@@ -203,7 +203,11 @@ build_new_record () {
 		fi
 
 		# for better or worse, we have a value
+		# verify the value against the data type
 		value=$(sanitize_column_value "$column_name" "$column_type" "$value");
+
+		# sanitize the value
+		value=$(sanitize "$value");
 
 		# ok, at least now it's not worse
 		new_record=$(append "$new_record" "$value" "$delim");
@@ -267,6 +271,9 @@ update () {
 
 	local escaped_updated_record=$(echo "$updated_record" | sed -e 's/[\/&]/\\&/g');
 
+	#@tag_update_sanitize
+	#escaped_updated_record=$(sanitize "$escaped_updated_record");
+
 	# replace line by line number
 	sed -i "${line_number}s/.*/$escaped_updated_record/" "$(tablefile "$table_name")";
 
@@ -328,7 +335,7 @@ sanitize_column_value () {
 	elif [[ "$type" == "text" ]]; then
 
 		# text accepts all. Let's do fuck-all.
-		echo "$value";
+		printf "$value";
 	fi
 }
 
